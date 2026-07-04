@@ -3,14 +3,14 @@
 import { useMemo, useState } from "react";
 import { FolderOpen, Undo2 } from "lucide-react";
 import { useApp } from "@/hooks/use-app";
+import { useI18n } from "@/hooks/use-i18n";
 import {
   filterCheckIns,
-  formatCheckInDate,
-  formatCheckInTime,
-  getUniqueAddressNames,
   groupCheckInsByDate,
+  getUniqueAddressNames,
   type CheckInFilters,
 } from "@/lib/check-ins";
+import { formatCheckInDate, formatCheckInTime } from "@/lib/format-locale";
 import { WASTE_TYPES, type CheckIn } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -26,6 +26,7 @@ import { X } from "lucide-react";
 
 export function CheckInHistory() {
   const { checkIns, loading } = useApp();
+  const { locale } = useI18n();
   const [filters, setFilters] = useState<CheckInFilters>({});
 
   const filtered = useMemo(() => filterCheckIns(checkIns, filters), [checkIns, filters]);
@@ -118,7 +119,7 @@ export function CheckInHistory() {
           {Array.from(grouped.entries()).map(([dateKey, items]) => (
             <section key={dateKey} className="space-y-2">
               <h2 className="px-1 text-sm font-semibold text-primary">
-                {formatCheckInDate(items[0].checkedAt)}
+                {formatCheckInDate(items[0].checkedAt, locale)}
               </h2>
               <div className="space-y-1">
                 {items.map((checkIn) => (

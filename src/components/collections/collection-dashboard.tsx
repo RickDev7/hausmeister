@@ -9,9 +9,9 @@ import {
   filterCollections,
   groupByDate,
   groupCollections,
-  formatCollectionDate,
   type CollectionFilters,
 } from "@/lib/collections";
+import { formatCollectionDate } from "@/lib/format-locale";
 import { CollectionFiltersBar } from "@/components/collections/collection-filters";
 import { CollectionGroup, CollectionItem } from "@/components/collections/collection-item";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,7 +19,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 export function CollectionDashboard() {
   const { addresses, collections, loading } = useApp();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [filters, setFilters] = useState<CollectionFilters>({});
 
   const enriched = useMemo(() => {
@@ -77,7 +77,10 @@ export function CollectionDashboard() {
           {Array.from(upcomingByDate.entries()).map(([date, events]) => (
             <div key={date} className="space-y-1">
               <h3 className="px-1 text-sm font-medium text-muted-foreground">
-                {formatCollectionDate(date)}
+                {formatCollectionDate(date, locale, {
+                  today: t.home.today,
+                  tomorrow: t.home.tomorrow,
+                })}
               </h3>
               <div className="space-y-1">
                 {events.map((event) => (

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Pencil, Trash2, Calendar, MapPin } from "lucide-react";
 import { useApp } from "@/hooks/use-app";
 import { saveAddress } from "@/lib/db";
+import { buildAddressColorMap, getAddressColor } from "@/lib/address-colors";
 import { reimportAddress, removeAddress } from "@/lib/services/address-service";
 import type { Address } from "@/types";
 import { AddressImport } from "@/components/addresses/address-import";
@@ -27,6 +28,8 @@ export function AddressManager() {
   const [editName, setEditName] = useState("");
   const [deleting, setDeleting] = useState<Address | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const colorMap = useMemo(() => buildAddressColorMap(addresses), [addresses]);
 
   const getEventCount = (addressId: string) =>
     collections.filter((c) => c.addressId === addressId).length;
@@ -90,10 +93,15 @@ export function AddressManager() {
         </Card>
       ) : (
         <div className="space-y-3">
-          {addresses.map((address) => (
+          {addresses.map((address) => {
+            const color = getAddressColor(address.id, colorMap);
+            return (
             <Card key={address.id}>
               <CardContent className="flex items-center gap-3 p-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary-container text-on-primary-container">
+                <div
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl"
+                  style={{ backgroundColor: color.light, color: color.main }}
+                >
                   <MapPin className="h-5 w-5" />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -133,7 +141,8 @@ export function AddressManager() {
                 </div>
               </CardContent>
             </Card>
-          ))}
+            );
+          })}
         </div>
       )}
 

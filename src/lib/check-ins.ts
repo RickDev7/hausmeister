@@ -1,15 +1,4 @@
-import { format, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import type { CheckIn, WasteType } from "@/types";
-
-export function formatCheckInDate(iso: string): string {
-  return format(parseISO(iso.slice(0, 10)), "dd/MM/yyyy", { locale: ptBR });
-}
-
-export function formatCheckInTime(iso: string): string {
-  const date = new Date(iso);
-  return format(date, "HH:mm", { locale: ptBR });
-}
 
 export function getCheckInDateKey(iso: string): string {
   return iso.slice(0, 10);

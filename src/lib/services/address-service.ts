@@ -1,5 +1,4 @@
 import { parseIcsFile, suggestAddressName } from "@/lib/ics-parser";
-import { fetchWebcal } from "@/lib/services/backup-service";
 import {
   deleteAddress as deleteAddressFromDb,
   replaceCollectionsForAddress,
@@ -87,4 +86,11 @@ export async function removeAddress(addressId: string): Promise<void> {
 
 export function filterIcsFiles(files: FileList | File[]): File[] {
   return Array.from(files).filter((f) => f.name.toLowerCase().endsWith(".ics"));
+}
+
+export async function fetchWebcal(url: string): Promise<string> {
+  const normalized = url.replace(/^webcal:\/\//i, "https://").replace(/^webcal:/i, "https:");
+  const res = await fetch(normalized);
+  if (!res.ok) throw new Error(`Falha ao baixar calendário: ${res.status}`);
+  return res.text();
 }

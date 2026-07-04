@@ -1,19 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Bell,
   Moon,
   Sun,
   Monitor,
   Download,
-  Upload,
-  QrCode,
-  UserPlus,
   Globe,
   LayoutList,
 } from "lucide-react";
-import QRCode from "qrcode";
 import { useApp } from "@/hooks/use-app";
 import { useTheme } from "@/components/theme-provider";
 import { useI18n } from "@/hooks/use-i18n";
@@ -23,11 +19,6 @@ import {
   setupBackgroundNotifications,
   teardownBackgroundNotifications,
 } from "@/lib/notifications";
-import {
-  downloadBackup,
-  exportBackup,
-  importBackupFromFile,
-} from "@/lib/services/backup-service";
 import type { Locale, NotificationSettings, ViewMode } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -41,26 +32,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 export function SettingsPanel() {
-  const { settings, updateSettings, profiles, setActiveProfile, addProfile, refresh } = useApp();
+  const { settings, updateSettings } = useApp();
   const { theme, setTheme } = useTheme();
   const { t } = useI18n();
   const [notifPermission, setNotifPermission] = useState<NotificationPermission>("default");
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [testingNotif, setTestingNotif] = useState(false);
   const [pushStatus, setPushStatus] = useState<"idle" | "ok" | "partial" | "off">("idle");
-  const [newProfileName, setNewProfileName] = useState("");
-  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
-  const [qrOpen, setQrOpen] = useState(false);
-  const importRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setNotifPermission(getNotificationPermission());
@@ -130,25 +111,6 @@ export function SettingsPanel() {
     await updateSettings({ ...settings, viewMode });
   };
 
-  const handleAddProfile = async () => {
-    if (!newProfileName.trim()) return;
-    await addProfile(newProfileName.trim());
-    setNewProfileName("");
-  };
-
-  const handleImportBackup = async (file: File) => {
-    await importBackupFromFile(file);
-    await refresh();
-  };
-
-  const generateQr = async () => {
-    const backup = await exportBackup();
-    const json = JSON.stringify(backup);
-    const url = await QRCode.toDataURL(json, { width: 280, margin: 2 });
-    setQrDataUrl(url);
-    setQrOpen(true);
-  };
-
   const themeOptions = [
     { value: "light" as const, label: t.settings.themeLight, icon: Sun },
     { value: "dark" as const, label: t.settings.themeDark, icon: Moon },
@@ -216,39 +178,6 @@ export function SettingsPanel() {
                 {mode === "compact" ? t.settings.compact : t.settings.detailed}
               </button>
             ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <UserPlus className="h-5 w-5" />
-            {t.settings.profiles}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Select value={settings.activeProfileId} onValueChange={setActiveProfile}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {profiles.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <div className="flex gap-2">
-            <Input
-              value={newProfileName}
-              onChange={(e) => setNewProfileName(e.target.value)}
-              placeholder={t.settings.addProfile}
-            />
-            <Button onClick={handleAddProfile} disabled={!newProfileName.trim()}>
-              +
-            </Button>
           </div>
         </CardContent>
       </Card>
@@ -356,58 +285,12 @@ export function SettingsPanel() {
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>{t.settings.backup}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <Button variant="outline" className="w-full" onClick={() => downloadBackup()}>
-            <Download className="h-4 w-4" />
-            {t.settings.export}
-          </Button>
-          <input
-            ref={importRef}
-            type="file"
-            accept="application/json,.json"
-            className="hidden"
-            onChange={async (e) => {
-              const file = e.target.files?.[0];
-              if (file) await handleImportBackup(file);
-              e.target.value = "";
-            }}
-          />
-          <Button variant="outline" className="w-full" onClick={() => importRef.current?.click()}>
-            <Upload className="h-4 w-4" />
-            {t.settings.import}
-          </Button>
-          <Button variant="outline" className="w-full" onClick={generateQr}>
-            <QrCode className="h-4 w-4" />
-            {t.settings.qr}
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Card>
         <CardContent className="p-4 text-center text-sm text-muted-foreground">
           <p>{t.appName} v2.0</p>
           <p className="mt-1">{t.settings.privacy}</p>
           <p className="mt-2 text-xs">{t.settings.iosHint}</p>
         </CardContent>
       </Card>
-
-      <Dialog open={qrOpen} onOpenChange={setQrOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t.settings.qr}</DialogTitle>
-          </DialogHeader>
-          {qrDataUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={qrDataUrl} alt="QR backup" className="mx-auto rounded-xl" />
-          )}
-          <p className="text-center text-xs text-muted-foreground">
-            Escaneie para transferir dados entre dispositivos.
-          </p>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

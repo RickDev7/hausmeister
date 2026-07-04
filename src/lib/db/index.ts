@@ -403,22 +403,3 @@ export async function deletePhoto(id: string): Promise<void> {
   const db = await getDB();
   await db.delete("checkInPhotos", id);
 }
-
-// Clear all (backup restore)
-export async function clearAllData(): Promise<void> {
-  const db = await getDB();
-  const stores = [
-    "addresses",
-    "collections",
-    "checkIns",
-    "checkInPhotos",
-    "shownNotifications",
-    "profiles",
-  ] as const;
-
-  const tx = db.transaction(stores, "readwrite");
-  for (const store of stores) {
-    await tx.objectStore(store).clear();
-  }
-  await tx.done;
-}

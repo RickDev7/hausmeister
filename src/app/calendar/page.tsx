@@ -1,11 +1,5 @@
-import { AppHeader } from "@/components/layout/app-header";
-import { CalendarView } from "@/components/calendar/calendar-view";
+import { CalendarPageContent } from "@/components/calendar/calendar-page-content";
 
 export default function CalendarPage() {
-  return (
-    <>
-      <AppHeader title="Calendário" subtitle="Visão mensal das coletas" />
-      <CalendarView />
-    </>
-  );
+  return <CalendarPageContent />;
 }

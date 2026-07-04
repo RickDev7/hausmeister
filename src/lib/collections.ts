@@ -1,11 +1,7 @@
 import {
   addDays,
   format,
-  isToday,
-  isTomorrow,
-  parseISO,
 } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import type { CollectionEvent, CollectionType } from "@/types";
 
 export interface CollectionFilters {
@@ -67,13 +63,6 @@ export function groupCollections(events: EnrichedCollection[]): GroupedCollectio
     tomorrow: future.filter((e) => e.date === tomorrowStr),
     upcoming: future.filter((e) => e.date > tomorrowStr),
   };
-}
-
-export function formatCollectionDate(dateStr: string): string {
-  const date = parseISO(dateStr);
-  if (isToday(date)) return "Hoje";
-  if (isTomorrow(date)) return "Amanhã";
-  return format(date, "EEEE, d 'de' MMMM", { locale: ptBR });
 }
 
 export function hasActiveCollectionFilters(filters: CollectionFilters): boolean {

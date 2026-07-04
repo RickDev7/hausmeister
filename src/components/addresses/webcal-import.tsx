@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export function WebcalImport() {
-  const { refresh, settings } = useApp();
+  const { refresh } = useApp();
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [url, setUrl] = useState("");
@@ -30,7 +30,7 @@ export function WebcalImport() {
     setLoading(true);
     setError(null);
     try {
-      await importFromWebcal(url.trim(), name.trim(), settings.activeProfileId);
+      await importFromWebcal(url.trim(), name.trim());
       setOpen(false);
       setUrl("");
       setName("");

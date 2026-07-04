@@ -99,17 +99,6 @@ export interface ShownNotification {
   shownAt: string;
 }
 
-export interface BackupData {
-  version: 3;
-  exportedAt: string;
-  profiles: Profile[];
-  addresses: Address[];
-  collections: CollectionEvent[];
-  checkIns: CheckIn[];
-  checkInPhotos: CheckInPhoto[];
-  settings: AppSettings;
-}
-
 export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
   enabled: false,
   dayBeforeEnabled: true,

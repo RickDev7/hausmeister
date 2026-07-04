@@ -29,7 +29,7 @@ interface PendingImport {
 }
 
 export function AddressImport() {
-  const { refresh, settings } = useApp();
+  const { refresh } = useApp();
   const inputRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
   const [pending, setPending] = useState<PendingImport | null>(null);
@@ -47,7 +47,7 @@ export function AddressImport() {
         const file = icsFiles[0];
         const addressId = generateId();
         const content = await file.text();
-        const events = parseIcsFile(content, addressId, settings.activeProfileId);
+        const events = parseIcsFile(content, addressId);
 
         setPending({
           file,
@@ -57,7 +57,7 @@ export function AddressImport() {
         });
         setName(suggestAddressName(file.name));
       } else {
-        await importMultipleAddresses(icsFiles, settings.activeProfileId);
+        await importMultipleAddresses(icsFiles);
         await refresh();
       }
     } finally {
@@ -70,7 +70,7 @@ export function AddressImport() {
     if (!pending || !name.trim()) return;
     setImporting(true);
     try {
-      await importNewAddress(pending.file, name.trim(), pending.addressId, settings.activeProfileId);
+      await importNewAddress(pending.file, name.trim(), pending.addressId);
       setPending(null);
       setName("");
       await refresh();

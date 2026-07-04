@@ -14,12 +14,11 @@ import type { CheckIn, CheckInPhoto } from "@/types";
 export interface CheckInOptions {
   note?: string;
   photoDataUrl?: string;
-  profileId: string;
 }
 
 export async function performCheckIn(
   event: EnrichedCollection,
-  options: CheckInOptions
+  options: CheckInOptions = {}
 ): Promise<CheckIn> {
   const existing = await getCheckInByEventId(event.id);
   if (existing) return existing;
@@ -27,7 +26,7 @@ export async function performCheckIn(
   const checkIn: CheckIn = {
     id: generateId(),
     collectionEventId: event.id,
-    profileId: options.profileId,
+    profileId: event.profileId,
     addressName: event.addressName,
     wasteType: resolveWasteType(event),
     eventDate: event.date,

@@ -1,5 +1,4 @@
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import type { CheckIn, CollectionEvent, WasteType } from "@/types";
 
 export interface CollectionStats {
@@ -71,10 +70,6 @@ export function getEventsForMonth(
 
 export function getCalendarDays(month: Date): Date[] {
   return eachDayOfInterval({ start: startOfMonth(month), end: endOfMonth(month) });
-}
-
-export function formatMonthYear(month: Date): string {
-  return format(month, "MMMM yyyy", { locale: ptBR });
 }
 
 export function isCurrentMonth(day: Date, month: Date): boolean {
