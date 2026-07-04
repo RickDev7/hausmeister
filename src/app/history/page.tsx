@@ -1,17 +1,5 @@
-import { AppHeader } from "@/components/layout/app-header";
-import { HistoryStats } from "@/components/history/history-stats";
-import { WeeklyReportCard } from "@/components/history/weekly-report-card";
-import { CheckInHistory } from "@/components/history/check-in-history";
+import { HistoryPageContent } from "@/components/history/history-page-content";
 
 export default function HistoryPage() {
-  return (
-    <>
-      <AppHeader title="Histórico" subtitle="Check-ins de coleta" />
-      <div className="space-y-4 py-4">
-        <WeeklyReportCard />
-        <HistoryStats />
-        <CheckInHistory />
-      </div>
-    </>
-  );
+  return <HistoryPageContent />;
 }

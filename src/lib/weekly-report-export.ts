@@ -1,6 +1,13 @@
 import type { WeeklyReport, WeeklyReportRow } from "@/lib/weekly-report";
+import {
+  formatExportDate,
+  formatExportDateTime,
+  localeToHtmlLang,
+} from "@/lib/format-locale";
+import type { Locale } from "@/types";
 
 export interface WeeklyReportLabels {
+  locale: Locale;
   appName: string;
   title: string;
   scheduled: string;
@@ -21,6 +28,9 @@ export interface WeeklyReportLabels {
   allEvents: string;
   printHint: string;
   printButton: string;
+  fileName: string;
+  addressSummary: string;
+  pendingLine: string;
 }
 
 /** Excel alemão/europeu usa ponto-e-vírgula como separador de colunas. */
@@ -37,16 +47,19 @@ function row(cells: (string | number)[]): string {
   return cells.map((c) => escapeCell(String(c))).join(EXCEL_SEP);
 }
 
-function formatDate(dateStr: string): string {
-  const [y, m, d] = dateStr.split("-");
-  return `${d}.${m}.${y}`;
+function formatDate(dateStr: string, locale: Locale): string {
+  return formatExportDate(dateStr, locale);
 }
 
-function formatDateTime(iso?: string): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+function formatDateTime(iso: string | undefined, locale: Locale): string {
+  return formatExportDateTime(iso, locale);
+}
+
+function fillTemplate(template: string, vars: Record<string, string | number>): string {
+  return Object.entries(vars).reduce(
+    (result, [key, value]) => result.replaceAll(`{${key}}`, String(value)),
+    template
+  );
 }
 
 function blankRow(cols = 5): string {
@@ -61,7 +74,7 @@ export function weeklyReportToCsv(report: WeeklyReport, labels: WeeklyReportLabe
   const lines: string[] = [
     `sep=${EXCEL_SEP}`,
     sectionTitle(`${labels.appName} — ${labels.title}`),
-    row([labels.period, formatDate(report.weekStart), formatDate(report.weekEnd)]),
+    row([labels.period, formatDate(report.weekStart, labels.locale), formatDate(report.weekEnd, labels.locale)]),
     blankRow(),
     sectionTitle(labels.title),
     row([labels.scheduled, report.scheduled]),
@@ -84,11 +97,11 @@ export function weeklyReportToCsv(report: WeeklyReport, labels: WeeklyReportLabe
 
 function eventRow(r: WeeklyReportRow, labels: WeeklyReportLabels): string {
   return row([
-    formatDate(r.date),
+    formatDate(r.date, labels.locale),
     r.addressName,
     r.typeLabel,
     r.status === "done" ? labels.statusDone : labels.statusPending,
-    formatDateTime(r.checkedAt),
+    formatDateTime(r.checkedAt, labels.locale),
   ]);
 }
 
@@ -98,15 +111,20 @@ export function weeklyReportToPlainText(
 ): string {
   const lines = [
     `${labels.appName} — ${labels.title}`,
-    `${formatDate(report.weekStart)} – ${formatDate(report.weekEnd)}`,
+    `${formatDate(report.weekStart, labels.locale)} – ${formatDate(report.weekEnd, labels.locale)}`,
     "",
     `${labels.scheduled}: ${report.scheduled}`,
     `${labels.checkIns}: ${report.checkIns}`,
     `${labels.pending}: ${report.pending}`,
     "",
     labels.byAddress,
-    ...report.byAddress.map(
-      (a) => `• ${a.addressName}: ${a.checkIns}/${a.scheduled} (${a.pending} ${labels.pending.toLowerCase()})`
+    ...report.byAddress.map((a) =>
+      fillTemplate(labels.addressSummary, {
+        name: a.addressName,
+        checkIns: a.checkIns,
+        scheduled: a.scheduled,
+        pending: a.pending,
+      })
     ),
   ];
 
@@ -114,7 +132,13 @@ export function weeklyReportToPlainText(
   if (pending.length > 0) {
     lines.push("", labels.pendingSection);
     for (const r of pending) {
-      lines.push(`• ${formatDate(r.date)} — ${r.addressName} (${r.typeLabel})`);
+      lines.push(
+        fillTemplate(labels.pendingLine, {
+          date: formatDate(r.date, labels.locale),
+          address: r.addressName,
+          type: r.typeLabel,
+        })
+      );
     }
   }
 
@@ -127,7 +151,7 @@ export function downloadWeeklyReportCsv(report: WeeklyReport, labels: WeeklyRepo
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = `relatorio-semanal_${report.weekStart}_${report.weekEnd}.csv`;
+  anchor.download = `${labels.fileName}_${report.weekStart}_${report.weekEnd}.csv`;
   anchor.click();
   URL.revokeObjectURL(url);
 }
@@ -141,7 +165,8 @@ function escapeHtml(text: string): string {
 }
 
 function buildReportHtml(report: WeeklyReport, labels: WeeklyReportLabels): string {
-  const period = `${escapeHtml(formatDate(report.weekStart))} – ${escapeHtml(formatDate(report.weekEnd))}`;
+  const period = `${escapeHtml(formatDate(report.weekStart, labels.locale))} – ${escapeHtml(formatDate(report.weekEnd, labels.locale))}`;
+  const htmlLang = localeToHtmlLang(labels.locale);
 
   const addressRows = report.byAddress
     .map(
@@ -154,17 +179,17 @@ function buildReportHtml(report: WeeklyReport, labels: WeeklyReportLabels): stri
     .map(
       (r) =>
         `<tr>
-          <td class="nowrap">${escapeHtml(formatDate(r.date))}</td>
+          <td class="nowrap">${escapeHtml(formatDate(r.date, labels.locale))}</td>
           <td>${escapeHtml(r.addressName)}</td>
           <td>${escapeHtml(r.typeLabel)}</td>
           <td><span class="badge ${r.status}">${escapeHtml(r.status === "done" ? labels.statusDone : labels.statusPending)}</span></td>
-          <td class="nowrap">${escapeHtml(formatDateTime(r.checkedAt))}</td>
+          <td class="nowrap">${escapeHtml(formatDateTime(r.checkedAt, labels.locale))}</td>
         </tr>`
     )
     .join("");
 
   return `<!DOCTYPE html>
-<html lang="de">
+<html lang="${htmlLang}">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -295,14 +320,14 @@ export function printWeeklyReport(report: WeeklyReport, labels: WeeklyReportLabe
 
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = `relatorio-semanal_${report.weekStart}.html`;
+  anchor.download = `${labels.fileName}_${report.weekStart}.html`;
   anchor.click();
   cleanup();
 }
 
 export function emailWeeklyReport(report: WeeklyReport, labels: WeeklyReportLabels): void {
   const subject = encodeURIComponent(
-    `${labels.title} (${formatDate(report.weekStart)} – ${formatDate(report.weekEnd)})`
+    `${labels.title} (${formatDate(report.weekStart, labels.locale)} – ${formatDate(report.weekEnd, labels.locale)})`
   );
   const body = encodeURIComponent(weeklyReportToPlainText(report, labels));
   window.location.href = `mailto:?subject=${subject}&body=${body}`;
@@ -319,7 +344,7 @@ export async function shareWeeklyReport(
     const csv = weeklyReportToCsv(report, labels);
     const file = new File(
       [csv],
-      `relatorio-semanal_${report.weekStart}.csv`,
+      `${labels.fileName}_${report.weekStart}.csv`,
       { type: "text/csv" }
     );
     if (navigator.canShare?.({ files: [file] })) {

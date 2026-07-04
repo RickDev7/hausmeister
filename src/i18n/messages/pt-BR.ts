@@ -14,6 +14,9 @@ export const ptBR = {
     total: "Total de check-ins",
     thisMonth: "Este mês",
     byType: "Por tipo",
+    noFilterResults: "Nenhum check-in encontrado para os filtros selecionados.",
+    filterAddress: "Endereço",
+    filterType: "Tipo de lixo",
     report: {
       title: "Resumo semanal",
       scheduled: "Agendadas",
@@ -43,6 +46,9 @@ export const ptBR = {
       printButton: "Imprimir / Guardar PDF",
       summary:
         "Esta semana: {scheduled} coletas, {checkIns} check-ins, {pending} pendentes.",
+      fileName: "relatorio-semanal",
+      addressSummary: "{name}: {checkIns}/{scheduled} ({pending} pendentes)",
+      pendingLine: "• {date} — {address} ({type})",
     },
   },
   addresses: { title: "Endereços", subtitle: "Gerenciar arquivos ICS", import: "Importar arquivo .ics", importWebcal: "Importar via URL (webcal)", empty: "Nenhum endereço ainda", collections: "coletas", reimport: "Reimportar", edit: "Editar endereço", delete: "Excluir endereço?", save: "Salvar", cancel: "Cancelar", deleteBtn: "Excluir", nameAddress: "Nomear endereço" },
@@ -68,6 +74,9 @@ export interface Messages {
     total: string;
     thisMonth: string;
     byType: string;
+    noFilterResults: string;
+    filterAddress: string;
+    filterType: string;
     report: {
       title: string;
       scheduled: string;
@@ -96,6 +105,9 @@ export interface Messages {
       printHint: string;
       printButton: string;
       summary: string;
+      fileName: string;
+      addressSummary: string;
+      pendingLine: string;
     };
   };
   addresses: { title: string; subtitle: string; import: string; importWebcal: string; empty: string; collections: string; reimport: string; edit: string; delete: string; save: string; cancel: string; deleteBtn: string; nameAddress: string };

@@ -33,6 +33,7 @@ export function WeeklyReportCard() {
 
   const labels: WeeklyReportLabels = useMemo(
     () => ({
+      locale,
       appName: t.appName,
       title: t.history.report.title,
       scheduled: t.history.report.scheduled,
@@ -53,8 +54,11 @@ export function WeeklyReportCard() {
       allEvents: t.history.report.allEvents,
       printHint: t.history.report.printHint,
       printButton: t.history.report.printButton,
+      fileName: t.history.report.fileName,
+      addressSummary: t.history.report.addressSummary,
+      pendingLine: t.history.report.pendingLine,
     }),
-    [t]
+    [t, locale]
   );
 
   if (loading || addresses.length === 0) return null;

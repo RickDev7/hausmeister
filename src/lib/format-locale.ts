@@ -86,3 +86,33 @@ export function formatCheckInTime(iso: string): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
+
+export function formatExportDate(dateStr: string, locale: Locale): string {
+  return new Intl.DateTimeFormat(toBcp47(locale), {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(new Date(`${dateStr}T12:00:00`));
+}
+
+export function formatExportDateTime(iso: string | undefined, locale: Locale): string {
+  if (!iso) return "";
+  return new Intl.DateTimeFormat(toBcp47(locale), {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(iso));
+}
+
+export function localeToHtmlLang(locale: Locale): string {
+  switch (locale) {
+    case "de":
+      return "de";
+    case "en":
+      return "en";
+    default:
+      return "pt-BR";
+  }
+}

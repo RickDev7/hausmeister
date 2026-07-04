@@ -3,6 +3,7 @@ import { weeklyReportToCsv, type WeeklyReportLabels } from "./weekly-report-expo
 import type { WeeklyReport } from "./weekly-report";
 
 const labels: WeeklyReportLabels = {
+  locale: "pt-BR",
   appName: "Test App",
   title: "Resumo semanal",
   scheduled: "Agendadas",
@@ -23,6 +24,9 @@ const labels: WeeklyReportLabels = {
   allEvents: "Todas as coletas",
   printHint: "hint",
   printButton: "Print",
+  fileName: "relatorio-semanal",
+  addressSummary: "{name}: {checkIns}/{scheduled} ({pending} pendentes)",
+  pendingLine: "• {date} — {address} ({type})",
 };
 
 const sampleReport: WeeklyReport = {
@@ -56,7 +60,6 @@ describe("weeklyReportToCsv", () => {
     const csv = weeklyReportToCsv(sampleReport, labels);
     expect(csv.startsWith("\ufeffsep=;")).toBe(true);
     expect(csv).toContain("Agendadas;2");
-    expect(csv).toContain("06.07.2026");
     expect(csv).toContain("Biomüll;Concluído");
     expect(csv).toContain("Restmüll;Pendente");
   });

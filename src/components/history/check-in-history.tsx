@@ -26,7 +26,7 @@ import { X } from "lucide-react";
 
 export function CheckInHistory() {
   const { checkIns, loading } = useApp();
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
   const [filters, setFilters] = useState<CheckInFilters>({});
 
   const filtered = useMemo(() => filterCheckIns(checkIns, filters), [checkIns, filters]);
@@ -44,10 +44,8 @@ export function CheckInHistory() {
       <Card>
         <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
           <FolderOpen className="h-12 w-12 text-muted-foreground" />
-          <p className="font-medium">Nenhum check-in ainda</p>
-          <p className="text-sm text-muted-foreground">
-            Marque coletas como feitas na visão geral para vê-las aqui.
-          </p>
+          <p className="font-medium">{t.history.empty}</p>
+          <p className="text-sm text-muted-foreground">{t.history.emptyHint}</p>
         </CardContent>
       </Card>
     );
@@ -63,10 +61,10 @@ export function CheckInHistory() {
           }
         >
           <SelectTrigger>
-            <SelectValue placeholder="Endereço" />
+            <SelectValue placeholder={t.history.filterAddress} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos os endereços</SelectItem>
+            <SelectItem value="all">{t.filters.allAddresses}</SelectItem>
             {addressNames.map((name) => (
               <SelectItem key={name} value={name}>
                 {name}
@@ -85,10 +83,10 @@ export function CheckInHistory() {
           }
         >
           <SelectTrigger>
-            <SelectValue placeholder="Tipo de lixo" />
+            <SelectValue placeholder={t.history.filterType} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos os tipos</SelectItem>
+            <SelectItem value="all">{t.filters.allTypes}</SelectItem>
             {WASTE_TYPES.map((type) => (
               <SelectItem key={type} value={type}>
                 {type}
@@ -106,13 +104,13 @@ export function CheckInHistory() {
           className="w-full"
         >
           <X className="h-4 w-4" />
-          Limpar filtros
+          {t.filters.clear}
         </Button>
       )}
 
       {filtered.length === 0 ? (
         <p className="py-8 text-center text-sm text-muted-foreground">
-          Nenhum check-in encontrado para os filtros selecionados.
+          {t.history.noFilterResults}
         </p>
       ) : (
         <div className="space-y-6">
@@ -136,6 +134,7 @@ export function CheckInHistory() {
 
 function CheckInHistoryItem({ checkIn }: { checkIn: CheckIn }) {
   const { undoCheckInForEvent } = useApp();
+  const { t } = useI18n();
   const [submitting, setSubmitting] = useState(false);
 
   const handleUndo = async () => {
@@ -166,7 +165,8 @@ function CheckInHistoryItem({ checkIn }: { checkIn: CheckIn }) {
         size="icon"
         onClick={handleUndo}
         disabled={submitting}
-        title="Desfazer check-in"
+        title={t.checkIn.undo}
+        aria-label={t.checkIn.undo}
         className="shrink-0 text-muted-foreground"
       >
         <Undo2 className="h-4 w-4" />
