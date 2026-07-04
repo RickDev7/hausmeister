@@ -8,16 +8,21 @@ const labels: WeeklyReportLabels = {
   title: "Resumo semanal",
   scheduled: "Agendadas",
   checkIns: "Check-ins",
+  missed: "Não saíram",
   pending: "Pendentes",
+  compliance: "Taxa de cumprimento",
   byAddress: "Por endereço",
   address: "Endereço",
   date: "Data",
   type: "Tipo",
   status: "Status",
   statusDone: "Concluído",
+  statusMissed: "Não saiu",
   statusPending: "Pendente",
   checkedAt: "Check-in em",
+  note: "Nota",
   pendingSection: "Pendentes",
+  missedSection: "Não saíram",
   checkInsSection: "Check-ins",
   period: "Período",
   value: "Valor",
@@ -25,8 +30,9 @@ const labels: WeeklyReportLabels = {
   printHint: "hint",
   printButton: "Print",
   fileName: "relatorio-semanal",
-  addressSummary: "{name}: {checkIns}/{scheduled} ({pending} pendentes)",
+  addressSummary: "{name}: {checkIns}/{scheduled} ({missed} não saíram, {pending} pendentes)",
   pendingLine: "• {date} — {address} ({type})",
+  missedLine: "• {date} — {address} ({type}): {note}",
 };
 
 const sampleReport: WeeklyReport = {
@@ -34,8 +40,12 @@ const sampleReport: WeeklyReport = {
   weekEnd: "2026-07-12",
   scheduled: 2,
   checkIns: 1,
+  missed: 0,
   pending: 1,
-  byAddress: [{ addressName: "Hauptstr. 1", scheduled: 2, checkIns: 1, pending: 1 }],
+  complianceRate: 50,
+  byAddress: [
+    { addressName: "Hauptstr. 1", scheduled: 2, checkIns: 1, missed: 0, pending: 1 },
+  ],
   rows: [
     {
       eventId: "e1",
@@ -62,11 +72,12 @@ describe("weeklyReportToCsv", () => {
     expect(csv).toContain("Agendadas;2");
     expect(csv).toContain("Biomüll;Concluído");
     expect(csv).toContain("Restmüll;Pendente");
+    expect(csv).toContain("Taxa de cumprimento;50%");
   });
 
-  it("includes unified events table", () => {
+  it("includes unified events table with note column", () => {
     const csv = weeklyReportToCsv(sampleReport, labels);
     expect(csv).toContain("Todas as coletas");
-    expect(csv).toContain("Status;Check-in em");
+    expect(csv).toContain("Status;Check-in em;Nota");
   });
 });

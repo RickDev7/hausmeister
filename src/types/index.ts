@@ -8,6 +8,7 @@ export type WasteType =
 
 export type Locale = "pt-BR" | "de" | "en";
 export type ViewMode = "compact" | "detailed";
+export type CheckInStatus = "completed" | "missed";
 
 export interface Profile {
   id: string;
@@ -23,6 +24,8 @@ export interface CheckIn {
   wasteType: WasteType;
   eventDate: string;
   checkedAt: string;
+  /** Omitido em registos antigos — tratado como "completed". */
+  status?: CheckInStatus;
   note?: string;
   photoId?: string;
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { FolderOpen, Undo2 } from "lucide-react";
+import { FolderOpen, Undo2, XCircle } from "lucide-react";
 import { useApp } from "@/hooks/use-app";
 import { useI18n } from "@/hooks/use-i18n";
 import {
@@ -11,6 +11,7 @@ import {
   type CheckInFilters,
 } from "@/lib/check-ins";
 import { formatCheckInDate, formatCheckInTime } from "@/lib/format-locale";
+import { getWasteTypeLabel } from "@/lib/waste-type-labels";
 import { WASTE_TYPES, type CheckIn } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -22,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
 
 export function CheckInHistory() {
@@ -87,9 +89,9 @@ export function CheckInHistory() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{t.filters.allTypes}</SelectItem>
-            {WASTE_TYPES.map((type) => (
-              <SelectItem key={type} value={type}>
-                {type}
+            {WASTE_TYPES.map((wt) => (
+              <SelectItem key={wt} value={wt}>
+                {getWasteTypeLabel(wt, t)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -136,6 +138,8 @@ function CheckInHistoryItem({ checkIn }: { checkIn: CheckIn }) {
   const { undoCheckInForEvent } = useApp();
   const { t } = useI18n();
   const [submitting, setSubmitting] = useState(false);
+  const isMissed = checkIn.status === "missed";
+  const wasteLabel = getWasteTypeLabel(checkIn.wasteType, t);
 
   const handleUndo = async () => {
     if (submitting) return;
@@ -150,9 +154,17 @@ function CheckInHistoryItem({ checkIn }: { checkIn: CheckIn }) {
   return (
     <div className="flex items-center justify-between gap-3 rounded-2xl bg-surface-container-lowest px-4 py-3">
       <div className="min-w-0 flex-1">
-        <p className="truncate font-medium">
-          {checkIn.addressName} — {checkIn.wasteType}
-        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="truncate font-medium">
+            {checkIn.addressName} — {wasteLabel}
+          </p>
+          {isMissed && (
+            <Badge variant="outline" className="gap-1 shrink-0 border-destructive/40 bg-destructive/10 text-destructive">
+              <XCircle className="h-3 w-3" />
+              {t.checkIn.missedDone}
+            </Badge>
+          )}
+        </div>
         {checkIn.note && (
           <p className="truncate text-xs text-muted-foreground">{checkIn.note}</p>
         )}

@@ -1,8 +1,10 @@
 "use client";
 
 import { Search, X } from "lucide-react";
+import { useI18n } from "@/hooks/use-i18n";
 import { getAllCollectionTypes } from "@/lib/collection-types";
 import { hasActiveCollectionFilters, type CollectionFilters } from "@/lib/collections";
+import { getCollectionTypeLabel } from "@/lib/waste-type-labels";
 import type { Address } from "@/types";
 import { Input } from "@/components/ui/input";
 import {
@@ -25,6 +27,7 @@ export function CollectionFiltersBar({
   addresses,
   onChange,
 }: CollectionFiltersBarProps) {
+  const { t } = useI18n();
   const types = getAllCollectionTypes();
   const hasActiveFilters = hasActiveCollectionFilters(filters);
 
@@ -33,7 +36,7 @@ export function CollectionFiltersBar({
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Pesquisar endereço..."
+          placeholder={t.filters.search}
           value={filters.search ?? ""}
           onChange={(e) => onChange({ ...filters, search: e.target.value || undefined })}
           className="pl-10"
@@ -48,10 +51,10 @@ export function CollectionFiltersBar({
           }
         >
           <SelectTrigger>
-            <SelectValue placeholder="Endereço" />
+            <SelectValue placeholder={t.filters.addressPlaceholder} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos os endereços</SelectItem>
+            <SelectItem value="all">{t.filters.allAddresses}</SelectItem>
             {addresses.map((a) => (
               <SelectItem key={a.id} value={a.id}>
                 {a.name}
@@ -67,13 +70,13 @@ export function CollectionFiltersBar({
           }
         >
           <SelectTrigger>
-            <SelectValue placeholder="Tipo de lixo" />
+            <SelectValue placeholder={t.filters.typePlaceholder} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos os tipos</SelectItem>
-            {types.map((t) => (
-              <SelectItem key={t.type} value={t.type}>
-                {t.label}
+            <SelectItem value="all">{t.filters.allTypes}</SelectItem>
+            {types.map((typeItem) => (
+              <SelectItem key={typeItem.type} value={typeItem.type}>
+                {getCollectionTypeLabel(typeItem.type, t)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -87,7 +90,7 @@ export function CollectionFiltersBar({
           onChange={(e) =>
             onChange({ ...filters, dateFrom: e.target.value || undefined })
           }
-          aria-label="Data inicial"
+          aria-label={t.filters.dateFrom}
         />
         <Input
           type="date"
@@ -95,7 +98,7 @@ export function CollectionFiltersBar({
           onChange={(e) =>
             onChange({ ...filters, dateTo: e.target.value || undefined })
           }
-          aria-label="Data final"
+          aria-label={t.filters.dateTo}
         />
       </div>
 
@@ -107,7 +110,7 @@ export function CollectionFiltersBar({
           className="w-full"
         >
           <X className="h-4 w-4" />
-          Limpar filtros
+          {t.filters.clear}
         </Button>
       )}
     </div>

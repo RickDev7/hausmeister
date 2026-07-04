@@ -11,18 +11,21 @@ import {
 import type { Address, AppSettings, CheckIn, CollectionEvent } from "@/types";
 import { DEFAULT_APP_SETTINGS } from "@/types";
 import type { EnrichedCollection } from "@/lib/collections";
-import { performCheckIn, revertCheckIn, type CheckInOptions } from "@/lib/services/check-in-service";
+import { performCheckIn, performMissedCollection, revertCheckIn, type CheckInOptions } from "@/lib/services/check-in-service";
 
 interface AppContextValue {
   addresses: Address[];
   collections: CollectionEvent[];
   checkIns: CheckIn[];
   checkedEventIds: Set<string>;
+  completedEventIds: Set<string>;
+  missedEventIds: Set<string>;
   settings: AppSettings;
   loading: boolean;
   refresh: () => Promise<void>;
   updateSettings: (settings: AppSettings) => Promise<void>;
   checkInForEvent: (event: EnrichedCollection, options?: Partial<CheckInOptions>) => Promise<void>;
+  missedCollectionForEvent: (event: EnrichedCollection, note: string) => Promise<void>;
   undoCheckInForEvent: (collectionEventId: string) => Promise<void>;
 }
 
@@ -37,6 +40,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const checkedEventIds = useMemo(
     () => new Set(checkIns.map((c) => c.collectionEventId)),
+    [checkIns]
+  );
+
+  const completedEventIds = useMemo(
+    () => new Set(checkIns.filter((c) => c.status !== "missed").map((c) => c.collectionEventId)),
+    [checkIns]
+  );
+
+  const missedEventIds = useMemo(
+    () => new Set(checkIns.filter((c) => c.status === "missed").map((c) => c.collectionEventId)),
     [checkIns]
   );
 
@@ -73,6 +86,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  const missedCollectionForEvent = useCallback(
+    async (event: EnrichedCollection, note: string) => {
+      const checkIn = await performMissedCollection(event, { note });
+      setCheckIns((prev) => {
+        const without = prev.filter((c) => c.collectionEventId !== event.id);
+        return [checkIn, ...without].sort((a, b) => b.checkedAt.localeCompare(a.checkedAt));
+      });
+    },
+    []
+  );
+
   const undoCheckInForEvent = useCallback(async (collectionEventId: string) => {
     await revertCheckIn(collectionEventId);
     setCheckIns((prev) => prev.filter((c) => c.collectionEventId !== collectionEventId));
@@ -89,11 +113,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         collections,
         checkIns,
         checkedEventIds,
+        completedEventIds,
+        missedEventIds,
         settings,
         loading,
         refresh,
         updateSettings,
         checkInForEvent,
+        missedCollectionForEvent,
         undoCheckInForEvent,
       }}
     >

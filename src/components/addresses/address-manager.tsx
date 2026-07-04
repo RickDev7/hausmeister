@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Pencil, Trash2, Calendar, MapPin } from "lucide-react";
 import { useApp } from "@/hooks/use-app";
+import { useI18n } from "@/hooks/use-i18n";
 import { saveAddress } from "@/lib/db";
 import { buildAddressColorMap, getAddressColor } from "@/lib/address-colors";
 import { reimportAddress, removeAddress } from "@/lib/services/address-service";
@@ -24,6 +25,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 export function AddressManager() {
   const { addresses, collections, loading, refresh } = useApp();
+  const { t } = useI18n();
   const [editing, setEditing] = useState<Address | null>(null);
   const [editName, setEditName] = useState("");
   const [deleting, setDeleting] = useState<Address | null>(null);
@@ -85,10 +87,8 @@ export function AddressManager() {
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
             <MapPin className="h-12 w-12 text-muted-foreground" />
-            <p className="font-medium">Nenhum endereço ainda</p>
-            <p className="text-sm text-muted-foreground">
-              Envie arquivos .ics de calendário do seu serviço de coleta.
-            </p>
+            <p className="font-medium">{t.addresses.empty}</p>
+            <p className="text-sm text-muted-foreground">{t.addresses.emptyHint}</p>
           </CardContent>
         </Card>
       ) : (
@@ -96,51 +96,63 @@ export function AddressManager() {
           {addresses.map((address) => {
             const color = getAddressColor(address.id, colorMap);
             return (
-            <Card key={address.id}>
-              <CardContent className="flex items-center gap-3 p-4">
-                <div
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl"
-                  style={{ backgroundColor: color.light, color: color.main }}
-                >
-                  <MapPin className="h-5 w-5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{address.name}</p>
-                  <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Calendar className="h-3 w-3" />
-                    {getEventCount(address.id)} coletas
-                  </p>
-                </div>
-                <div className="flex gap-1">
-                  <label className="inline-flex cursor-pointer">
-                    <input
-                      type="file"
-                      accept=".ics,text/calendar"
-                      className="sr-only"
-                      onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (file) await handleReimport(address, file);
-                        e.target.value = "";
-                      }}
-                    />
-                    <Button variant="ghost" size="icon" type="button" title="Reimportar">
-                      <Calendar className="h-4 w-4" />
-                    </Button>
-                  </label>
-                  <Button variant="ghost" size="icon" onClick={() => handleEdit(address)}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setDeleting(address)}
-                    className="text-destructive hover:text-destructive"
+              <Card key={address.id}>
+                <CardContent className="flex items-center gap-3 p-4">
+                  <div
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl"
+                    style={{ backgroundColor: color.light, color: color.main }}
                   >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                    <MapPin className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium">{address.name}</p>
+                    <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Calendar className="h-3 w-3" />
+                      {getEventCount(address.id)} {t.addresses.collections}
+                    </p>
+                  </div>
+                  <div className="flex gap-1">
+                    <label className="inline-flex cursor-pointer">
+                      <input
+                        type="file"
+                        accept=".ics,text/calendar"
+                        className="sr-only"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (file) await handleReimport(address, file);
+                          e.target.value = "";
+                        }}
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        type="button"
+                        title={t.addresses.reimport}
+                        aria-label={t.addresses.reimport}
+                      >
+                        <Calendar className="h-4 w-4" />
+                      </Button>
+                    </label>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleEdit(address)}
+                      aria-label={t.addresses.edit}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setDeleting(address)}
+                      className="text-destructive hover:text-destructive"
+                      aria-label={t.addresses.deleteBtn}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             );
           })}
         </div>
@@ -149,12 +161,12 @@ export function AddressManager() {
       <Dialog open={!!editing} onOpenChange={(open) => !open && setEditing(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Editar endereço</DialogTitle>
-            <DialogDescription>Altere o nome deste endereço.</DialogDescription>
+            <DialogTitle>{t.addresses.edit}</DialogTitle>
+            <DialogDescription>{t.addresses.editDescription}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-name">Nome do endereço</Label>
+              <Label htmlFor="edit-name">{t.addresses.addressNameLabel}</Label>
               <Input
                 id="edit-name"
                 value={editName}
@@ -163,7 +175,7 @@ export function AddressManager() {
               />
             </div>
             <Button onClick={saveEdit} disabled={!editName.trim() || saving} className="w-full">
-              Salvar
+              {t.addresses.save}
             </Button>
           </div>
         </DialogContent>
@@ -172,18 +184,18 @@ export function AddressManager() {
       <Dialog open={!!deleting} onOpenChange={(open) => !open && setDeleting(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Excluir endereço?</DialogTitle>
+            <DialogTitle>{t.addresses.delete}</DialogTitle>
             <DialogDescription>
-              &quot;{deleting?.name}&quot; e todas as coletas associadas serão excluídos
-              permanentemente.
+              {deleting &&
+                t.addresses.deleteDescription.replace("{name}", deleting.name)}
             </DialogDescription>
           </DialogHeader>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => setDeleting(null)} className="flex-1">
-              Cancelar
+              {t.addresses.cancel}
             </Button>
             <Button variant="destructive" onClick={confirmDelete} disabled={saving} className="flex-1">
-              Excluir
+              {t.addresses.deleteBtn}
             </Button>
           </div>
         </DialogContent>

@@ -6,6 +6,7 @@ import { useApp } from "@/hooks/use-app";
 import { useI18n } from "@/hooks/use-i18n";
 import { buildAddressMap } from "@/lib/address-map";
 import { formatWeekRange } from "@/lib/format-locale";
+import { getCollectionTypeLabel } from "@/lib/waste-type-labels";
 import {
   downloadWeeklyReportCsv,
   emailWeeklyReport,
@@ -13,9 +14,23 @@ import {
   shareWeeklyReport,
   type WeeklyReportLabels,
 } from "@/lib/weekly-report-export";
-import { computeWeeklyReport, shiftWeek } from "@/lib/weekly-report";
+import { computeWeeklyReport, shiftWeek, type WeeklyReport } from "@/lib/weekly-report";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+function localizeReport(
+  report: WeeklyReport,
+  typeByEventId: Map<string, Parameters<typeof getCollectionTypeLabel>[0]>,
+  t: Parameters<typeof getCollectionTypeLabel>[1]
+): WeeklyReport {
+  return {
+    ...report,
+    rows: report.rows.map((row) => ({
+      ...row,
+      typeLabel: getCollectionTypeLabel(typeByEventId.get(row.eventId) ?? "unknown", t),
+    })),
+  };
+}
 
 export function WeeklyReportCard() {
   const { collections, checkIns, addresses, loading } = useApp();
@@ -24,10 +39,15 @@ export function WeeklyReportCard() {
 
   const addressMap = useMemo(() => buildAddressMap(addresses), [addresses]);
 
-  const report = useMemo(
-    () => computeWeeklyReport(collections, checkIns, addressMap, weekRef),
-    [collections, checkIns, addressMap, weekRef]
+  const typeByEventId = useMemo(
+    () => new Map(collections.map((c) => [c.id, c.type])),
+    [collections]
   );
+
+  const report = useMemo(() => {
+    const base = computeWeeklyReport(collections, checkIns, addressMap, weekRef);
+    return localizeReport(base, typeByEventId, t);
+  }, [collections, checkIns, addressMap, weekRef, typeByEventId, t]);
 
   const weekLabel = formatWeekRange(report.weekStart, report.weekEnd, locale);
 
@@ -38,16 +58,21 @@ export function WeeklyReportCard() {
       title: t.history.report.title,
       scheduled: t.history.report.scheduled,
       checkIns: t.history.report.checkIns,
+      missed: t.history.report.missed,
       pending: t.history.report.pending,
+      compliance: t.history.report.compliance,
       byAddress: t.history.report.byAddress,
       address: t.history.report.address,
       date: t.history.report.date,
       type: t.history.report.type,
       status: t.history.report.status,
       statusDone: t.history.report.statusDone,
+      statusMissed: t.history.report.statusMissed,
       statusPending: t.history.report.statusPending,
       checkedAt: t.history.report.checkedAt,
+      note: t.history.report.note,
       pendingSection: t.history.report.pendingSection,
+      missedSection: t.history.report.missedSection,
       checkInsSection: t.history.report.checkInsSection,
       period: t.history.report.period,
       value: t.history.report.value,
@@ -57,11 +82,19 @@ export function WeeklyReportCard() {
       fileName: t.history.report.fileName,
       addressSummary: t.history.report.addressSummary,
       pendingLine: t.history.report.pendingLine,
+      missedLine: t.history.report.missedLine,
     }),
     [t, locale]
   );
 
   if (loading || addresses.length === 0) return null;
+
+  const summaryText = t.history.report.summary
+    .replace("{scheduled}", String(report.scheduled))
+    .replace("{checkIns}", String(report.checkIns))
+    .replace("{missed}", String(report.missed))
+    .replace("{pending}", String(report.pending))
+    .replace("{compliance}", String(report.complianceRate));
 
   return (
     <Card>
@@ -97,13 +130,8 @@ export function WeeklyReportCard() {
           <p className="text-center text-sm text-muted-foreground">{t.history.report.noData}</p>
         ) : (
           <>
-            <p className="text-sm text-muted-foreground">
-              {t.history.report.summary
-                .replace("{scheduled}", String(report.scheduled))
-                .replace("{checkIns}", String(report.checkIns))
-                .replace("{pending}", String(report.pending))}
-            </p>
-            <div className="grid grid-cols-3 gap-2 text-center">
+            <p className="text-sm text-muted-foreground">{summaryText}</p>
+            <div className="grid grid-cols-2 gap-2 text-center sm:grid-cols-4">
               <div className="rounded-2xl bg-surface-container-lowest p-3">
                 <p className="text-2xl font-bold tabular-nums">{report.scheduled}</p>
                 <p className="text-xs text-muted-foreground">{t.history.report.scheduled}</p>
@@ -112,6 +140,12 @@ export function WeeklyReportCard() {
                 <p className="text-2xl font-bold tabular-nums text-primary">{report.checkIns}</p>
                 <p className="text-xs text-muted-foreground">{t.history.report.checkIns}</p>
               </div>
+              <div className="rounded-2xl bg-orange-100 p-3 dark:bg-orange-950/40">
+                <p className="text-2xl font-bold tabular-nums text-orange-800 dark:text-orange-200">
+                  {report.missed}
+                </p>
+                <p className="text-xs text-orange-800 dark:text-orange-200">{t.history.report.missed}</p>
+              </div>
               <div className="rounded-2xl bg-error-container p-3">
                 <p className="text-2xl font-bold tabular-nums text-on-error-container">
                   {report.pending}
@@ -119,6 +153,9 @@ export function WeeklyReportCard() {
                 <p className="text-xs text-on-error-container">{t.history.report.pending}</p>
               </div>
             </div>
+            <p className="text-center text-sm font-medium text-primary">
+              {t.history.report.compliance}: {report.complianceRate}%
+            </p>
 
             {report.byAddress.length > 1 && (
               <ul className="space-y-1 text-sm">
@@ -130,6 +167,7 @@ export function WeeklyReportCard() {
                     <span className="truncate font-medium">{a.addressName}</span>
                     <span className="shrink-0 tabular-nums text-muted-foreground">
                       {a.checkIns}/{a.scheduled}
+                      {a.missed > 0 && ` · ${a.missed} ✗`}
                     </span>
                   </li>
                 ))}

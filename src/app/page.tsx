@@ -1,13 +1,5 @@
-import { AppHeader } from "@/components/layout/app-header";
-import { CollectionDashboard } from "@/components/collections/collection-dashboard";
+import { HomePageContent } from "@/components/home/home-page-content";
 
 export default function HomePage() {
-  return (
-    <>
-      <AppHeader subtitle="Suas datas de coleta" />
-      <div className="py-4">
-        <CollectionDashboard />
-      </div>
-    </>
-  );
+  return <HomePageContent />;
 }

@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { FileUp, Loader2 } from "lucide-react";
 import { useApp } from "@/hooks/use-app";
+import { useI18n } from "@/hooks/use-i18n";
 import { parseIcsFile, suggestAddressName } from "@/lib/ics-parser";
 import {
   filterIcsFiles,
@@ -30,6 +31,7 @@ interface PendingImport {
 
 export function AddressImport() {
   const { refresh } = useApp();
+  const { t } = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
   const [pending, setPending] = useState<PendingImport | null>(null);
@@ -79,6 +81,12 @@ export function AddressImport() {
     }
   };
 
+  const importDescription = pending
+    ? t.addresses.importDialogDescription
+        .replace("{count}", String(pending.eventCount))
+        .replace("{fileName}", pending.file.name)
+    : "";
+
   return (
     <>
       <input
@@ -100,35 +108,28 @@ export function AddressImport() {
         ) : (
           <FileUp className="h-4 w-4" />
         )}
-        Importar arquivo .ics
+        {t.addresses.import}
       </Button>
 
       <Dialog open={!!pending} onOpenChange={(open) => !open && setPending(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Nomear endereço</DialogTitle>
-            <DialogDescription>
-              {pending && (
-                <>
-                  {pending.eventCount} coletas encontradas em &quot;{pending.file.name}&quot;.
-                  Digite um nome para este endereço.
-                </>
-              )}
-            </DialogDescription>
+            <DialogTitle>{t.addresses.nameAddress}</DialogTitle>
+            <DialogDescription>{importDescription}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="address-name">Nome do endereço</Label>
+              <Label htmlFor="address-name">{t.addresses.addressNameLabel}</Label>
               <Input
                 id="address-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="ex.: Rua Principal, 15"
+                placeholder={t.addresses.importPlaceholder}
                 onKeyDown={(e) => e.key === "Enter" && confirmImport()}
               />
             </div>
             <Button onClick={confirmImport} disabled={!name.trim() || importing} className="w-full">
-              {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : "Importar"}
+              {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : t.addresses.importBtn}
             </Button>
           </div>
         </DialogContent>

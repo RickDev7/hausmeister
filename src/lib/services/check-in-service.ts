@@ -16,6 +16,18 @@ export interface CheckInOptions {
   photoDataUrl?: string;
 }
 
+export interface MissedCollectionOptions {
+  note: string;
+}
+
+export function isCompletedCheckIn(checkIn: CheckIn): boolean {
+  return checkIn.status !== "missed";
+}
+
+export function isMissedCheckIn(checkIn: CheckIn): boolean {
+  return checkIn.status === "missed";
+}
+
 export async function performCheckIn(
   event: EnrichedCollection,
   options: CheckInOptions = {}
@@ -31,6 +43,7 @@ export async function performCheckIn(
     wasteType: resolveWasteType(event),
     eventDate: event.date,
     checkedAt: new Date().toISOString(),
+    status: "completed",
     note: options.note?.trim() || undefined,
   };
 
@@ -48,6 +61,34 @@ export async function performCheckIn(
     await addCheckIn(checkIn);
   }
 
+  return checkIn;
+}
+
+export async function performMissedCollection(
+  event: EnrichedCollection,
+  options: MissedCollectionOptions
+): Promise<CheckIn> {
+  const note = options.note.trim();
+  if (!note) {
+    throw new Error("Missed collection requires a reason note");
+  }
+
+  const existing = await getCheckInByEventId(event.id);
+  if (existing) return existing;
+
+  const checkIn: CheckIn = {
+    id: generateId(),
+    collectionEventId: event.id,
+    profileId: event.profileId,
+    addressName: event.addressName,
+    wasteType: resolveWasteType(event),
+    eventDate: event.date,
+    checkedAt: new Date().toISOString(),
+    status: "missed",
+    note,
+  };
+
+  await addCheckIn(checkIn);
   return checkIn;
 }
 

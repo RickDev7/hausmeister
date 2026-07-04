@@ -11,6 +11,7 @@ import { enrichCollections, type EnrichedCollection } from "@/lib/collections";
 import { getCalendarDays, getEventsForMonth } from "@/lib/stats";
 import { formatLongDate, formatMonthYear, getWeekdayLabels } from "@/lib/format-locale";
 import { getTypeMeta } from "@/lib/collection-types";
+import { getCollectionTypeLabel } from "@/lib/waste-type-labels";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -198,11 +199,12 @@ export function CalendarView() {
                   {dayEvents.slice(0, MAX_EVENTS_IN_CELL).map((event) => {
                     const color = getAddressColor(event.addressId, colorMap);
                     const meta = getTypeMeta(event.type);
+                    const typeLabel = getCollectionTypeLabel(event.type, t);
                     return (
                       <div
                         key={event.id}
                         className="flex items-center gap-0.5 overflow-hidden rounded-sm"
-                        title={`${event.addressName} — ${event.typeLabel}`}
+                        title={`${event.addressName} — ${typeLabel}`}
                       >
                         <span
                           className="w-1 shrink-0 self-stretch rounded-full"
@@ -251,18 +253,19 @@ export function CalendarView() {
               .sort(
                 (a, b) =>
                   a.addressName.localeCompare(b.addressName) ||
-                  a.typeLabel.localeCompare(b.typeLabel)
+                  getCollectionTypeLabel(a.type, t).localeCompare(getCollectionTypeLabel(b.type, t))
               )
               .map((event) => {
                 const color = getAddressColor(event.addressId, colorMap);
                 const meta = getTypeMeta(event.type);
+                const typeLabel = getCollectionTypeLabel(event.type, t);
                 return (
                   <li
                     key={event.id}
                     className="flex items-center gap-3 rounded-2xl border border-outline-variant bg-surface-container-lowest p-3"
                     style={{ borderLeftWidth: 4, borderLeftColor: color.main }}
                   >
-                    <span className="text-xl" role="img" aria-label={meta.label}>
+                    <span className="text-xl" role="img" aria-label={typeLabel}>
                       {meta.icon}
                     </span>
                     <div className="min-w-0 flex-1">
@@ -274,7 +277,7 @@ export function CalendarView() {
                           event.type === "gelbe_tonne" && "text-foreground"
                         )}
                       >
-                        {event.typeLabel}
+                        {typeLabel}
                       </Badge>
                     </div>
                     <span

@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Check, CheckCircle2, Undo2 } from "lucide-react";
+import { Check, CheckCircle2, Undo2, XCircle } from "lucide-react";
 import { getTypeMeta } from "@/lib/collection-types";
+import { getCollectionTypeLabel } from "@/lib/waste-type-labels";
 import type { EnrichedCollection } from "@/lib/collections";
 import { useApp } from "@/hooks/use-app";
 import { useI18n } from "@/hooks/use-i18n";
-import { CheckInDialog } from "@/components/collections/check-in-dialog";
+import { CheckInDialog, type CheckInDialogMode } from "@/components/collections/check-in-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -17,18 +18,35 @@ interface CollectionItemProps {
 }
 
 export function CollectionItem({ event, showDate = false }: CollectionItemProps) {
-  const { checkedEventIds, checkInForEvent, undoCheckInForEvent, settings } = useApp();
+  const {
+    completedEventIds,
+    missedEventIds,
+    checkInForEvent,
+    missedCollectionForEvent,
+    undoCheckInForEvent,
+    settings,
+  } = useApp();
   const { t } = useI18n();
   const [submitting, setSubmitting] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const isCompleted = checkedEventIds.has(event.id);
+  const [dialogMode, setDialogMode] = useState<CheckInDialogMode>("completed");
+
+  const isCompleted = completedEventIds.has(event.id);
+  const isMissed = missedEventIds.has(event.id);
+  const isResolved = isCompleted || isMissed;
   const meta = getTypeMeta(event.type);
+  const typeLabel = getCollectionTypeLabel(event.type, t);
   const compact = settings.viewMode === "compact";
 
+  const openDialog = (mode: CheckInDialogMode) => {
+    setDialogMode(mode);
+    setDialogOpen(true);
+  };
+
   const handleCheckIn = async () => {
-    if (isCompleted || submitting) return;
+    if (isResolved || submitting) return;
     if (settings.viewMode === "detailed") {
-      setDialogOpen(true);
+      openDialog("completed");
       return;
     }
     setSubmitting(true);
@@ -39,12 +57,22 @@ export function CollectionItem({ event, showDate = false }: CollectionItemProps)
     }
   };
 
+  const handleMissed = () => {
+    if (isResolved || submitting) return;
+    openDialog("missed");
+  };
+
   const handleConfirmDialog = async (note?: string, photoDataUrl?: string) => {
+    if (dialogMode === "missed") {
+      if (!note?.trim()) return;
+      await missedCollectionForEvent(event, note.trim());
+      return;
+    }
     await checkInForEvent(event, { note, photoDataUrl });
   };
 
   const handleUndo = async () => {
-    if (!isCompleted || submitting) return;
+    if (!isResolved || submitting) return;
     setSubmitting(true);
     try {
       await undoCheckInForEvent(event.id);
@@ -59,29 +87,42 @@ export function CollectionItem({ event, showDate = false }: CollectionItemProps)
         className={cn(
           "flex items-center gap-3 rounded-2xl bg-surface-container-lowest px-4 transition-colors",
           compact ? "py-2" : "py-3",
-          isCompleted ? "opacity-75" : "hover:bg-surface-container"
+          isResolved ? "opacity-75" : "hover:bg-surface-container"
         )}
       >
         {isCompleted ? (
           <CheckCircle2 className="h-7 w-7 shrink-0 text-primary" aria-label={t.checkIn.done} />
+        ) : isMissed ? (
+          <XCircle className="h-7 w-7 shrink-0 text-destructive" aria-label={t.checkIn.missedDone} />
         ) : (
-          <span className={cn("shrink-0", compact ? "text-xl" : "text-2xl")} role="img" aria-label={meta.label}>
+          <span className={cn("shrink-0", compact ? "text-xl" : "text-2xl")} role="img" aria-label={typeLabel}>
             {meta.icon}
           </span>
         )}
         <div className="min-w-0 flex-1">
-          <p className={cn("truncate font-medium", isCompleted && "line-through text-muted-foreground")}>
+          <p
+            className={cn(
+              "truncate font-medium",
+              isResolved && "line-through text-muted-foreground"
+            )}
+          >
             {event.addressName}
           </p>
           {!compact && (
             <div className="mt-1 flex flex-wrap items-center gap-2">
               <Badge variant={event.type} className={cn(event.type === "gelbe_tonne" && "text-foreground")}>
-                {event.typeLabel}
+                {typeLabel}
               </Badge>
               {isCompleted && (
                 <Badge variant="secondary" className="gap-1 bg-primary-container text-on-primary-container">
                   <Check className="h-3 w-3" />
                   {t.checkIn.done}
+                </Badge>
+              )}
+              {isMissed && (
+                <Badge variant="outline" className="gap-1 border-destructive/40 bg-destructive/10 text-destructive">
+                  <XCircle className="h-3 w-3" />
+                  {t.checkIn.missedDone}
                 </Badge>
               )}
               {showDate && (
@@ -93,7 +134,7 @@ export function CollectionItem({ event, showDate = false }: CollectionItemProps)
             <span className="text-xs text-muted-foreground">{event.date}</span>
           )}
         </div>
-        {isCompleted ? (
+        {isResolved ? (
           <Button
             size="sm"
             variant="ghost"
@@ -107,21 +148,33 @@ export function CollectionItem({ event, showDate = false }: CollectionItemProps)
             <span className="sr-only sm:not-sr-only">{t.checkIn.undo}</span>
           </Button>
         ) : (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleCheckIn}
-            disabled={submitting}
-            className="shrink-0"
-            aria-label={t.checkIn.action}
-          >
-            {submitting ? "..." : t.checkIn.action}
-          </Button>
+          <div className="flex shrink-0 flex-col gap-1">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleCheckIn}
+              disabled={submitting}
+              aria-label={t.checkIn.action}
+            >
+              {submitting && dialogMode === "completed" ? "..." : t.checkIn.action}
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleMissed}
+              disabled={submitting}
+              className="text-destructive hover:text-destructive"
+              aria-label={t.checkIn.missed}
+            >
+              {t.checkIn.missed}
+            </Button>
+          </div>
         )}
       </div>
 
       <CheckInDialog
         event={event}
+        mode={dialogMode}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         onConfirm={handleConfirmDialog}

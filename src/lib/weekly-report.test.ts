@@ -16,7 +16,7 @@ function event(id: string, addressId: string, date: string): CollectionEvent {
   };
 }
 
-function checkIn(eventId: string, eventDate: string): CheckIn {
+function checkIn(eventId: string, eventDate: string, status: CheckIn["status"] = "completed"): CheckIn {
   return {
     id: `ci-${eventId}`,
     collectionEventId: eventId,
@@ -25,32 +25,41 @@ function checkIn(eventId: string, eventDate: string): CheckIn {
     wasteType: "Biomüll",
     eventDate,
     checkedAt: `${eventDate}T10:00:00.000Z`,
+    status,
   };
 }
 
 describe("computeWeeklyReport", () => {
-  it("counts scheduled, check-ins and pending for the week", () => {
-    const ref = parseISO("2026-07-08"); // Wed in week Mon 6 - Sun 12 Jul 2026
+  it("counts scheduled, check-ins, missed and pending for the week", () => {
+    const ref = parseISO("2026-07-08");
     const collections = [
       event("e1", "addr-1", "2026-07-06"),
       event("e2", "addr-1", "2026-07-08"),
       event("e3", "addr-2", "2026-07-10"),
-      event("e4", "addr-2", "2026-07-15"), // next week
+      event("e4", "addr-2", "2026-07-15"),
     ];
-    const checkIns = [checkIn("e1", "2026-07-06"), checkIn("e2", "2026-07-08")];
+    const checkIns = [
+      checkIn("e1", "2026-07-06"),
+      checkIn("e2", "2026-07-08"),
+      { ...checkIn("e3", "2026-07-10", "missed"), note: "Esqueci", status: "missed" as const },
+    ];
 
     const report = computeWeeklyReport(collections, checkIns, addressMap, ref);
 
     expect(report.scheduled).toBe(3);
     expect(report.checkIns).toBe(2);
-    expect(report.pending).toBe(1);
+    expect(report.missed).toBe(1);
+    expect(report.pending).toBe(0);
+    expect(report.complianceRate).toBe(67);
     expect(report.byAddress).toHaveLength(2);
+    expect(report.rows.find((r) => r.eventId === "e3")?.status).toBe("missed");
   });
 
   it("returns empty week when no events", () => {
     const report = computeWeeklyReport([], [], addressMap, new Date("2026-07-08"));
     expect(report.scheduled).toBe(0);
     expect(report.pending).toBe(0);
+    expect(report.complianceRate).toBe(100);
   });
 });
 

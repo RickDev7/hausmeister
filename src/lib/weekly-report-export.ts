@@ -12,16 +12,21 @@ export interface WeeklyReportLabels {
   title: string;
   scheduled: string;
   checkIns: string;
+  missed: string;
   pending: string;
+  compliance: string;
   byAddress: string;
   address: string;
   date: string;
   type: string;
   status: string;
   statusDone: string;
+  statusMissed: string;
   statusPending: string;
   checkedAt: string;
+  note: string;
   pendingSection: string;
+  missedSection: string;
   checkInsSection: string;
   period: string;
   value: string;
@@ -31,10 +36,12 @@ export interface WeeklyReportLabels {
   fileName: string;
   addressSummary: string;
   pendingLine: string;
+  missedLine: string;
 }
 
 /** Excel alemão/europeu usa ponto-e-vírgula como separador de colunas. */
 const EXCEL_SEP = ";";
+const TABLE_COLS = 6;
 
 function escapeCell(value: string): string {
   if (/[;"'\n\r]/.test(value)) {
@@ -62,33 +69,52 @@ function fillTemplate(template: string, vars: Record<string, string | number>): 
   );
 }
 
-function blankRow(cols = 5): string {
+function blankRow(cols = TABLE_COLS): string {
   return row(Array(cols).fill(""));
 }
 
-function sectionTitle(title: string, cols = 5): string {
+function sectionTitle(title: string, cols = TABLE_COLS): string {
   return row([title, ...Array(cols - 1).fill("")]);
+}
+
+function statusLabel(r: WeeklyReportRow, labels: WeeklyReportLabels): string {
+  if (r.status === "done") return labels.statusDone;
+  if (r.status === "missed") return labels.statusMissed;
+  return labels.statusPending;
 }
 
 export function weeklyReportToCsv(report: WeeklyReport, labels: WeeklyReportLabels): string {
   const lines: string[] = [
     `sep=${EXCEL_SEP}`,
     sectionTitle(`${labels.appName} — ${labels.title}`),
-    row([labels.period, formatDate(report.weekStart, labels.locale), formatDate(report.weekEnd, labels.locale)]),
+    row([
+      labels.period,
+      formatDate(report.weekStart, labels.locale),
+      formatDate(report.weekEnd, labels.locale),
+    ]),
     blankRow(),
     sectionTitle(labels.title),
     row([labels.scheduled, report.scheduled]),
     row([labels.checkIns, report.checkIns]),
+    row([labels.missed, report.missed]),
     row([labels.pending, report.pending]),
+    row([labels.compliance, `${report.complianceRate}%`]),
     blankRow(),
     sectionTitle(labels.byAddress),
-    row([labels.address, labels.scheduled, labels.checkIns, labels.pending]),
+    row([labels.address, labels.scheduled, labels.checkIns, labels.missed, labels.pending]),
     ...report.byAddress.map((a) =>
-      row([a.addressName, a.scheduled, a.checkIns, a.pending])
+      row([a.addressName, a.scheduled, a.checkIns, a.missed, a.pending])
     ),
     blankRow(),
     sectionTitle(labels.allEvents),
-    row([labels.date, labels.address, labels.type, labels.status, labels.checkedAt]),
+    row([
+      labels.date,
+      labels.address,
+      labels.type,
+      labels.status,
+      labels.checkedAt,
+      labels.note,
+    ]),
     ...report.rows.map((r) => eventRow(r, labels)),
   ];
 
@@ -100,8 +126,9 @@ function eventRow(r: WeeklyReportRow, labels: WeeklyReportLabels): string {
     formatDate(r.date, labels.locale),
     r.addressName,
     r.typeLabel,
-    r.status === "done" ? labels.statusDone : labels.statusPending,
+    statusLabel(r, labels),
     formatDateTime(r.checkedAt, labels.locale),
+    r.note ?? "",
   ]);
 }
 
@@ -115,7 +142,9 @@ export function weeklyReportToPlainText(
     "",
     `${labels.scheduled}: ${report.scheduled}`,
     `${labels.checkIns}: ${report.checkIns}`,
+    `${labels.missed}: ${report.missed}`,
     `${labels.pending}: ${report.pending}`,
+    `${labels.compliance}: ${report.complianceRate}%`,
     "",
     labels.byAddress,
     ...report.byAddress.map((a) =>
@@ -123,6 +152,7 @@ export function weeklyReportToPlainText(
         name: a.addressName,
         checkIns: a.checkIns,
         scheduled: a.scheduled,
+        missed: a.missed,
         pending: a.pending,
       })
     ),
@@ -137,6 +167,21 @@ export function weeklyReportToPlainText(
           date: formatDate(r.date, labels.locale),
           address: r.addressName,
           type: r.typeLabel,
+        })
+      );
+    }
+  }
+
+  const missed = report.rows.filter((r) => r.status === "missed");
+  if (missed.length > 0) {
+    lines.push("", labels.missedSection);
+    for (const r of missed) {
+      lines.push(
+        fillTemplate(labels.missedLine, {
+          date: formatDate(r.date, labels.locale),
+          address: r.addressName,
+          type: r.typeLabel,
+          note: r.note ?? "",
         })
       );
     }
@@ -171,7 +216,7 @@ function buildReportHtml(report: WeeklyReport, labels: WeeklyReportLabels): stri
   const addressRows = report.byAddress
     .map(
       (a) =>
-        `<tr><td>${escapeHtml(a.addressName)}</td><td class="num">${a.scheduled}</td><td class="num">${a.checkIns}</td><td class="num">${a.pending}</td></tr>`
+        `<tr><td>${escapeHtml(a.addressName)}</td><td class="num">${a.scheduled}</td><td class="num">${a.checkIns}</td><td class="num">${a.missed}</td><td class="num">${a.pending}</td></tr>`
     )
     .join("");
 
@@ -182,8 +227,9 @@ function buildReportHtml(report: WeeklyReport, labels: WeeklyReportLabels): stri
           <td class="nowrap">${escapeHtml(formatDate(r.date, labels.locale))}</td>
           <td>${escapeHtml(r.addressName)}</td>
           <td>${escapeHtml(r.typeLabel)}</td>
-          <td><span class="badge ${r.status}">${escapeHtml(r.status === "done" ? labels.statusDone : labels.statusPending)}</span></td>
+          <td><span class="badge ${r.status}">${escapeHtml(statusLabel(r, labels))}</span></td>
           <td class="nowrap">${escapeHtml(formatDateTime(r.checkedAt, labels.locale))}</td>
+          <td>${escapeHtml(r.note ?? "")}</td>
         </tr>`
     )
     .join("");
@@ -237,11 +283,14 @@ function buildReportHtml(report: WeeklyReport, labels: WeeklyReportLabels): stri
     header { border-bottom: 2px solid #006a60; padding-bottom: 12px; margin-bottom: 20px; }
     h1 { font-size: 18pt; margin: 0 0 4px; color: #006a60; line-height: 1.2; }
     .meta { color: #555; font-size: 11pt; margin: 0; }
-    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 24px; }
+    .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 24px; }
+    @media (min-width: 480px) { .stats { grid-template-columns: repeat(4, 1fr); } }
     .stat { border: 1px solid #ccc; border-radius: 8px; padding: 14px 8px; text-align: center; background: #fafafa; }
     .stat .num { font-size: 24pt; font-weight: 700; color: #006a60; display: block; line-height: 1.1; }
     .stat .lbl { font-size: 8pt; color: #666; margin-top: 6px; display: block; text-transform: uppercase; letter-spacing: 0.03em; }
     .stat.pending .num { color: #b3261e; }
+    .stat.missed .num { color: #9a3412; }
+    .compliance { text-align: center; margin: -12px 0 20px; font-size: 12pt; color: #006a60; font-weight: 600; }
     h2 { font-size: 10pt; text-transform: uppercase; letter-spacing: 0.06em; color: #006a60; margin: 24px 0 8px; border-bottom: 1px solid #ddd; padding-bottom: 4px; }
     table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 9.5pt; table-layout: fixed; }
     th, td { border: 1px solid #ccc; padding: 7px 6px; text-align: left; vertical-align: top; word-wrap: break-word; }
@@ -252,6 +301,7 @@ function buildReportHtml(report: WeeklyReport, labels: WeeklyReportLabels): stri
     .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 8pt; font-weight: 600; }
     .badge.done { background: #c7efcf; color: #1b5e20; }
     .badge.pending { background: #ffd9d9; color: #8b1a1a; }
+    .badge.missed { background: #ffe0cc; color: #9a3412; }
     footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid #ddd; font-size: 8pt; color: #888; text-align: center; }
     @page { size: A4 portrait; margin: 12mm; }
     @media print {
@@ -278,16 +328,18 @@ function buildReportHtml(report: WeeklyReport, labels: WeeklyReportLabels): stri
     <div class="stats">
       <div class="stat"><span class="num">${report.scheduled}</span><span class="lbl">${escapeHtml(labels.scheduled)}</span></div>
       <div class="stat"><span class="num">${report.checkIns}</span><span class="lbl">${escapeHtml(labels.checkIns)}</span></div>
+      <div class="stat missed"><span class="num">${report.missed}</span><span class="lbl">${escapeHtml(labels.missed)}</span></div>
       <div class="stat pending"><span class="num">${report.pending}</span><span class="lbl">${escapeHtml(labels.pending)}</span></div>
     </div>
+    <p class="compliance">${escapeHtml(labels.compliance)}: ${report.complianceRate}%</p>
     <h2>${escapeHtml(labels.byAddress)}</h2>
     <table>
-      <thead><tr><th>${escapeHtml(labels.address)}</th><th>${escapeHtml(labels.scheduled)}</th><th>${escapeHtml(labels.checkIns)}</th><th>${escapeHtml(labels.pending)}</th></tr></thead>
+      <thead><tr><th>${escapeHtml(labels.address)}</th><th>${escapeHtml(labels.scheduled)}</th><th>${escapeHtml(labels.checkIns)}</th><th>${escapeHtml(labels.missed)}</th><th>${escapeHtml(labels.pending)}</th></tr></thead>
       <tbody>${addressRows}</tbody>
     </table>
     <h2>${escapeHtml(labels.allEvents)}</h2>
     <table>
-      <thead><tr><th>${escapeHtml(labels.date)}</th><th>${escapeHtml(labels.address)}</th><th>${escapeHtml(labels.type)}</th><th>${escapeHtml(labels.status)}</th><th>${escapeHtml(labels.checkedAt)}</th></tr></thead>
+      <thead><tr><th>${escapeHtml(labels.date)}</th><th>${escapeHtml(labels.address)}</th><th>${escapeHtml(labels.type)}</th><th>${escapeHtml(labels.status)}</th><th>${escapeHtml(labels.checkedAt)}</th><th>${escapeHtml(labels.note)}</th></tr></thead>
       <tbody>${allEventsRows}</tbody>
     </table>
     <footer>${escapeHtml(labels.appName)} · ${period}</footer>

@@ -36,7 +36,7 @@ export function WebcalImport() {
       setName("");
       await refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro ao importar");
+      setError(e instanceof Error ? e.message : t.addresses.webcalError);
     } finally {
       setLoading(false);
     }
@@ -53,18 +53,16 @@ export function WebcalImport() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t.addresses.importWebcal}</DialogTitle>
-            <DialogDescription>
-              Cole a URL webcal ou https do calendário de coleta.
-            </DialogDescription>
+            <DialogDescription>{t.addresses.webcalDescription}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="webcal-url">URL</Label>
+              <Label htmlFor="webcal-url">{t.addresses.webcalUrlLabel}</Label>
               <Input
                 id="webcal-url"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
-                placeholder="webcal://..."
+                placeholder={t.addresses.webcalUrlPlaceholder}
               />
             </div>
             <div className="space-y-2">
@@ -73,16 +71,16 @@ export function WebcalImport() {
                 id="webcal-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="ex.: Casa"
+                placeholder={t.addresses.webcalNamePlaceholder}
               />
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
             <Button
               onClick={handleImport}
-              disabled={loading || !url.trim() || !name.trim()}
+              disabled={!url.trim() || !name.trim() || loading}
               className="w-full"
             >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : t.addresses.import}
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : t.addresses.importBtn}
             </Button>
           </div>
         </DialogContent>

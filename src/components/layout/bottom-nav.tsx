@@ -21,7 +21,7 @@ export function BottomNav() {
   return (
     <nav
       translate="no"
-      aria-label="Navegação principal"
+      aria-label={t.nav.main}
       className="fixed bottom-0 left-0 right-0 z-40 border-t border-outline-variant bg-surface-container-low/95 backdrop-blur-md pb-safe"
     >
       <div className="mx-auto flex max-w-lg items-center justify-around px-0.5 py-2">

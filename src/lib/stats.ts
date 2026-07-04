@@ -1,5 +1,6 @@
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth } from "date-fns";
 import type { CheckIn, CollectionEvent, WasteType } from "@/types";
+import { isCompletedCheckIn } from "@/lib/services/check-in-service";
 
 export interface CollectionStats {
   totalCheckIns: number;
@@ -9,21 +10,22 @@ export interface CollectionStats {
 }
 
 export function computeCheckInStats(checkIns: CheckIn[]): CollectionStats {
+  const completed = checkIns.filter(isCompletedCheckIn);
   const now = new Date();
   const monthPrefix = format(now, "yyyy-MM");
 
   const byType = {} as Record<WasteType, number>;
   let thisMonth = 0;
 
-  for (const c of checkIns) {
+  for (const c of completed) {
     if (c.checkedAt.startsWith(monthPrefix)) thisMonth++;
     byType[c.wasteType] = (byType[c.wasteType] ?? 0) + 1;
   }
 
-  const streak = computeStreak(checkIns);
+  const streak = computeStreak(completed);
 
   return {
-    totalCheckIns: checkIns.length,
+    totalCheckIns: completed.length,
     thisMonth,
     currentStreak: streak,
     byType,

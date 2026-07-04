@@ -1,13 +1,5 @@
-import { AppHeader } from "@/components/layout/app-header";
-import { AddressManager } from "@/components/addresses/address-manager";
+import { AddressesPageContent } from "@/components/addresses/addresses-page-content";
 
 export default function AddressesPage() {
-  return (
-    <>
-      <AppHeader title="Endereços" subtitle="Gerenciar arquivos ICS" />
-      <div className="py-4">
-        <AddressManager />
-      </div>
-    </>
-  );
+  return <AddressesPageContent />;
 }
