@@ -19,6 +19,8 @@ export interface WeeklyReportLabels {
   period: string;
   value: string;
   allEvents: string;
+  printHint: string;
+  printButton: string;
 }
 
 /** Excel alemão/europeu usa ponto-e-vírgula como separador de colunas. */
@@ -139,94 +141,139 @@ function escapeHtml(text: string): string {
 }
 
 function buildReportHtml(report: WeeklyReport, labels: WeeklyReportLabels): string {
-  const pending = report.rows.filter((r) => r.status === "pending");
-  const done = report.rows.filter((r) => r.status === "done");
   const period = `${escapeHtml(formatDate(report.weekStart))} – ${escapeHtml(formatDate(report.weekEnd))}`;
 
   const addressRows = report.byAddress
     .map(
       (a) =>
-        `<tr><td>${escapeHtml(a.addressName)}</td><td>${a.scheduled}</td><td>${a.checkIns}</td><td>${a.pending}</td></tr>`
+        `<tr><td>${escapeHtml(a.addressName)}</td><td class="num">${a.scheduled}</td><td class="num">${a.checkIns}</td><td class="num">${a.pending}</td></tr>`
     )
     .join("");
 
-  const eventTable = (rows: WeeklyReportRow[], showChecked: boolean) =>
-    rows
-      .map(
-        (r) =>
-          `<tr>
-            <td>${escapeHtml(formatDate(r.date))}</td>
-            <td>${escapeHtml(r.addressName)}</td>
-            <td>${escapeHtml(r.typeLabel)}</td>
-            ${showChecked ? `<td>${escapeHtml(formatDateTime(r.checkedAt))}</td>` : ""}
-          </tr>`
-      )
-      .join("");
+  const allEventsRows = report.rows
+    .map(
+      (r) =>
+        `<tr>
+          <td class="nowrap">${escapeHtml(formatDate(r.date))}</td>
+          <td>${escapeHtml(r.addressName)}</td>
+          <td>${escapeHtml(r.typeLabel)}</td>
+          <td><span class="badge ${r.status}">${escapeHtml(r.status === "done" ? labels.statusDone : labels.statusPending)}</span></td>
+          <td class="nowrap">${escapeHtml(formatDateTime(r.checkedAt))}</td>
+        </tr>`
+    )
+    .join("");
 
   return `<!DOCTYPE html>
 <html lang="de">
 <head>
   <meta charset="utf-8" />
-  <title>${escapeHtml(labels.title)}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${escapeHtml(labels.title)} — ${period}</title>
   <style>
     * { box-sizing: border-box; }
-    body { font-family: "Segoe UI", Arial, sans-serif; margin: 0; padding: 24px; color: #1a1a1a; font-size: 11pt; }
+    html { background: #e8e8e8; }
+    body {
+      font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+      margin: 0 auto;
+      padding: 0;
+      max-width: 210mm;
+      min-height: 100vh;
+      color: #1a1a1a;
+      font-size: 11pt;
+      background: #fff;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: #006a60;
+      color: #fff;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .toolbar p { margin: 0; font-size: 13px; line-height: 1.4; opacity: 0.95; }
+    .toolbar button {
+      background: #fff;
+      color: #006a60;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 20px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+    }
+    .content { padding: 20px 16px 32px; }
     header { border-bottom: 2px solid #006a60; padding-bottom: 12px; margin-bottom: 20px; }
-    h1 { font-size: 16pt; margin: 0 0 4px; color: #006a60; }
-    .meta { color: #555; font-size: 10pt; }
-    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
-    .stat { border: 1px solid #ccc; border-radius: 6px; padding: 12px; text-align: center; }
-    .stat .num { font-size: 22pt; font-weight: 700; color: #006a60; display: block; }
-    .stat .lbl { font-size: 9pt; color: #666; margin-top: 4px; }
+    h1 { font-size: 18pt; margin: 0 0 4px; color: #006a60; line-height: 1.2; }
+    .meta { color: #555; font-size: 11pt; margin: 0; }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 24px; }
+    .stat { border: 1px solid #ccc; border-radius: 8px; padding: 14px 8px; text-align: center; background: #fafafa; }
+    .stat .num { font-size: 24pt; font-weight: 700; color: #006a60; display: block; line-height: 1.1; }
+    .stat .lbl { font-size: 8pt; color: #666; margin-top: 6px; display: block; text-transform: uppercase; letter-spacing: 0.03em; }
     .stat.pending .num { color: #b3261e; }
-    h2 { font-size: 11pt; text-transform: uppercase; letter-spacing: 0.05em; color: #006a60; margin: 20px 0 8px; border-bottom: 1px solid #ddd; padding-bottom: 4px; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 10pt; }
-    th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }
-    th { background: #e8f5f3; font-weight: 600; }
+    h2 { font-size: 10pt; text-transform: uppercase; letter-spacing: 0.06em; color: #006a60; margin: 24px 0 8px; border-bottom: 1px solid #ddd; padding-bottom: 4px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 9.5pt; table-layout: fixed; }
+    th, td { border: 1px solid #ccc; padding: 7px 6px; text-align: left; vertical-align: top; word-wrap: break-word; }
+    th { background: #e8f5f3; font-weight: 600; font-size: 8.5pt; }
+    td.num { text-align: center; font-variant-numeric: tabular-nums; }
+    td.nowrap { white-space: nowrap; }
     tr:nth-child(even) td { background: #fafafa; }
-    footer { margin-top: 24px; font-size: 8pt; color: #888; text-align: center; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 8pt; font-weight: 600; }
+    .badge.done { background: #c7efcf; color: #1b5e20; }
+    .badge.pending { background: #ffd9d9; color: #8b1a1a; }
+    footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid #ddd; font-size: 8pt; color: #888; text-align: center; }
+    @page { size: A4 portrait; margin: 12mm; }
     @media print {
-      body { padding: 12px; }
-      .stat { break-inside: avoid; }
-      table { break-inside: auto; }
+      html { background: #fff; }
+      body { max-width: none; min-height: auto; }
+      .toolbar { display: none !important; }
+      .content { padding: 0; }
+      table { font-size: 9pt; }
       tr { break-inside: avoid; }
+      h2 { break-after: avoid; }
     }
   </style>
 </head>
 <body>
-  <header>
-    <h1>${escapeHtml(labels.appName)} — ${escapeHtml(labels.title)}</h1>
-    <p class="meta">${period}</p>
-  </header>
-  <div class="stats">
-    <div class="stat"><span class="num">${report.scheduled}</span><span class="lbl">${escapeHtml(labels.scheduled)}</span></div>
-    <div class="stat"><span class="num">${report.checkIns}</span><span class="lbl">${escapeHtml(labels.checkIns)}</span></div>
-    <div class="stat pending"><span class="num">${report.pending}</span><span class="lbl">${escapeHtml(labels.pending)}</span></div>
+  <div class="toolbar">
+    <p>${escapeHtml(labels.printHint)}</p>
+    <button type="button" onclick="window.print()">${escapeHtml(labels.printButton)}</button>
   </div>
-  <h2>${escapeHtml(labels.byAddress)}</h2>
-  <table>
-    <thead><tr><th>${escapeHtml(labels.address)}</th><th>${escapeHtml(labels.scheduled)}</th><th>${escapeHtml(labels.checkIns)}</th><th>${escapeHtml(labels.pending)}</th></tr></thead>
-    <tbody>${addressRows}</tbody>
-  </table>
-  ${
-    pending.length
-      ? `<h2>${escapeHtml(labels.pendingSection)}</h2>
-  <table>
-    <thead><tr><th>${escapeHtml(labels.date)}</th><th>${escapeHtml(labels.address)}</th><th>${escapeHtml(labels.type)}</th></tr></thead>
-    <tbody>${eventTable(pending, false)}</tbody>
-  </table>`
-      : ""
-  }
-  ${
-    done.length
-      ? `<h2>${escapeHtml(labels.checkInsSection)}</h2>
-  <table>
-    <thead><tr><th>${escapeHtml(labels.date)}</th><th>${escapeHtml(labels.address)}</th><th>${escapeHtml(labels.type)}</th><th>${escapeHtml(labels.checkedAt)}</th></tr></thead>
-    <tbody>${eventTable(done, true)}</tbody>
-  </table>`
-      : ""
-  }
-  <footer>${escapeHtml(labels.appName)} · ${period}</footer>
+  <div class="content">
+    <header>
+      <h1>${escapeHtml(labels.appName)}</h1>
+      <p class="meta">${escapeHtml(labels.title)} · ${period}</p>
+    </header>
+    <div class="stats">
+      <div class="stat"><span class="num">${report.scheduled}</span><span class="lbl">${escapeHtml(labels.scheduled)}</span></div>
+      <div class="stat"><span class="num">${report.checkIns}</span><span class="lbl">${escapeHtml(labels.checkIns)}</span></div>
+      <div class="stat pending"><span class="num">${report.pending}</span><span class="lbl">${escapeHtml(labels.pending)}</span></div>
+    </div>
+    <h2>${escapeHtml(labels.byAddress)}</h2>
+    <table>
+      <thead><tr><th>${escapeHtml(labels.address)}</th><th>${escapeHtml(labels.scheduled)}</th><th>${escapeHtml(labels.checkIns)}</th><th>${escapeHtml(labels.pending)}</th></tr></thead>
+      <tbody>${addressRows}</tbody>
+    </table>
+    <h2>${escapeHtml(labels.allEvents)}</h2>
+    <table>
+      <thead><tr><th>${escapeHtml(labels.date)}</th><th>${escapeHtml(labels.address)}</th><th>${escapeHtml(labels.type)}</th><th>${escapeHtml(labels.status)}</th><th>${escapeHtml(labels.checkedAt)}</th></tr></thead>
+      <tbody>${allEventsRows}</tbody>
+    </table>
+    <footer>${escapeHtml(labels.appName)} · ${period}</footer>
+  </div>
+  <script>
+    if (!/iPhone|iPad|iPod|Android|Mobile/i.test(navigator.userAgent)) {
+      window.addEventListener("load", function () {
+        setTimeout(function () { window.print(); }, 400);
+      });
+    }
+  </script>
 </body>
 </html>`;
 }
@@ -236,36 +283,21 @@ export function printWeeklyReport(report: WeeklyReport, labels: WeeklyReportLabe
   const blob = new Blob([html], { type: "text/html;charset=utf-8" });
   const url = URL.createObjectURL(blob);
 
-  const iframe = document.createElement("iframe");
-  iframe.setAttribute(
-    "style",
-    "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden"
-  );
-  iframe.src = url;
-  document.body.appendChild(iframe);
-
   const cleanup = () => {
-    URL.revokeObjectURL(url);
-    iframe.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 120_000);
   };
 
-  iframe.onload = () => {
-    window.setTimeout(() => {
-      try {
-        const win = iframe.contentWindow;
-        if (!win) {
-          cleanup();
-          return;
-        }
-        win.focus();
-        win.addEventListener("afterprint", cleanup, { once: true });
-        win.print();
-        window.setTimeout(cleanup, 120_000);
-      } catch {
-        cleanup();
-      }
-    }, 300);
-  };
+  const opened = window.open(url, "_blank", "noopener,noreferrer");
+  if (opened) {
+    cleanup();
+    return;
+  }
+
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `relatorio-semanal_${report.weekStart}.html`;
+  anchor.click();
+  cleanup();
 }
 
 export function emailWeeklyReport(report: WeeklyReport, labels: WeeklyReportLabels): void {

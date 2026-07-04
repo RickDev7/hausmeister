@@ -21,6 +21,8 @@ const labels: WeeklyReportLabels = {
   period: "Período",
   value: "Valor",
   allEvents: "Todas as coletas",
+  printHint: "hint",
+  printButton: "Print",
 };
 
 const sampleReport: WeeklyReport = {

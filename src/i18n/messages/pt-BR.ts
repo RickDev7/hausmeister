@@ -39,6 +39,8 @@ export const ptBR = {
       period: "Período",
       value: "Valor",
       allEvents: "Todas as coletas da semana",
+      printHint: "Toque em Imprimir abaixo ou use o menu do browser → Imprimir → Guardar como PDF.",
+      printButton: "Imprimir / Guardar PDF",
       summary:
         "Esta semana: {scheduled} coletas, {checkIns} check-ins, {pending} pendentes.",
     },
@@ -91,6 +93,8 @@ export interface Messages {
       period: string;
       value: string;
       allEvents: string;
+      printHint: string;
+      printButton: string;
       summary: string;
     };
   };

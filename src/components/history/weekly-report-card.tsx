@@ -51,6 +51,8 @@ export function WeeklyReportCard() {
       period: t.history.report.period,
       value: t.history.report.value,
       allEvents: t.history.report.allEvents,
+      printHint: t.history.report.printHint,
+      printButton: t.history.report.printButton,
     }),
     [t]
   );
