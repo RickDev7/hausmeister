@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useApp } from "@/hooks/use-app";
+import { useI18n } from "@/hooks/use-i18n";
 import { buildAddressMap } from "@/lib/address-map";
 import {
   enrichCollections,
@@ -18,6 +19,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 export function CollectionDashboard() {
   const { addresses, collections, loading } = useApp();
+  const { t } = useI18n();
   const [filters, setFilters] = useState<CollectionFilters>({});
 
   const enriched = useMemo(() => {
@@ -40,11 +42,8 @@ export function CollectionDashboard() {
     return (
       <Card>
         <CardContent className="py-12 text-center">
-          <p className="text-lg font-medium">Bem-vindo ao Planejador de Lixo!</p>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Importe arquivos .ics do seu serviço de coleta em &quot;Endereços&quot; para
-            ver suas datas de coleta.
-          </p>
+          <p className="text-lg font-medium">{t.home.welcome}</p>
+          <p className="mt-2 text-sm text-muted-foreground">{t.home.welcomeHint}</p>
         </CardContent>
       </Card>
     );
@@ -59,21 +58,21 @@ export function CollectionDashboard() {
       />
 
       <CollectionGroup
-        title="Hoje"
+        title={t.home.today}
         events={grouped.today}
-        emptyMessage="Sem coleta hoje"
+        emptyMessage={t.home.noToday}
       />
 
       <CollectionGroup
-        title="Amanhã"
+        title={t.home.tomorrow}
         events={grouped.tomorrow}
-        emptyMessage="Sem coleta amanhã"
+        emptyMessage={t.home.noTomorrow}
       />
 
       {grouped.upcoming.length > 0 && (
         <section className="space-y-4">
           <h2 className="px-1 text-sm font-semibold uppercase tracking-wider text-primary">
-            Próximos dias
+            {t.home.upcoming}
           </h2>
           {Array.from(upcomingByDate.entries()).map(([date, events]) => (
             <div key={date} className="space-y-1">
@@ -92,7 +91,7 @@ export function CollectionDashboard() {
 
       {filtered.length === 0 && addresses.length > 0 && (
         <p className="py-8 text-center text-sm text-muted-foreground">
-          Nenhuma coleta encontrada para os filtros selecionados.
+          {t.home.noFilterResults}
         </p>
       )}
     </div>

@@ -5,4 +5,8 @@ export {
   getCheckInByEventId,
   deleteCheckIn,
   deleteCheckInsForEventIds,
+  savePhoto,
+  getPhotoByCheckInId,
+  deletePhoto,
+  getAllPhotos,
 } from "@/lib/db";

@@ -153,6 +153,9 @@ function CheckInHistoryItem({ checkIn }: { checkIn: CheckIn }) {
         <p className="truncate font-medium">
           {checkIn.addressName} — {checkIn.wasteType}
         </p>
+        {checkIn.note && (
+          <p className="truncate text-xs text-muted-foreground">{checkIn.note}</p>
+        )}
       </div>
       <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
         {formatCheckInTime(checkIn.checkedAt)}

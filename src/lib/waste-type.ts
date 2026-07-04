@@ -17,6 +17,7 @@ export function resolveWasteType(event: CollectionEvent): WasteType {
     papier: "Papier",
     gelbe_tonne: "Gelbe Tonne",
     sondermuell: "Sperrmüll",
+    glas: "Restmüll",
     unknown: "Restmüll",
   };
 

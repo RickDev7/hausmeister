@@ -51,6 +51,13 @@ const TYPE_PATTERNS: TypePattern[] = [
     color: "var(--type-sondermuell)",
     icon: "⚠️",
   },
+  {
+    type: "glas",
+    label: "Vidro",
+    patterns: [/glas/i, /altglas/i, /glascontainer/i, /glasigel/i],
+    color: "var(--type-glas)",
+    icon: "🫙",
+  },
 ];
 
 export function detectCollectionType(title: string): {

@@ -15,6 +15,7 @@ const badgeVariants = cva(
         papier: "border-transparent text-white",
         gelbe_tonne: "border-transparent text-foreground",
         sondermuell: "border-transparent text-white",
+        glas: "border-transparent text-white",
         unknown: "border-transparent bg-surface-container-highest text-foreground",
       },
     },
@@ -35,6 +36,7 @@ function Badge({ className, variant, style, ...props }: BadgeProps) {
     papier: "var(--type-papier)",
     gelbe_tonne: "var(--type-gelbe-tonne)",
     sondermuell: "var(--type-sondermuell)",
+    glas: "var(--type-glas)",
   };
 
   const bgStyle =

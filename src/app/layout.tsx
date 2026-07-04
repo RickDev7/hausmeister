@@ -2,10 +2,13 @@ import type { Metadata, Viewport } from "next";
 import { Roboto } from "next/font/google";
 import "./globals.css";
 import { AppProvider } from "@/hooks/use-app";
+import { I18nProvider } from "@/hooks/use-i18n";
 import { ThemeProvider } from "@/components/theme-provider";
 import { NotificationScheduler } from "@/components/notification-scheduler";
 import { PwaRegister } from "@/components/pwa-register";
 import { BottomNav } from "@/components/layout/bottom-nav";
+import { Onboarding } from "@/components/onboarding/onboarding";
+import { OfflineBanner } from "@/components/offline-banner";
 
 const roboto = Roboto({
   variable: "--font-roboto",
@@ -59,14 +62,18 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <AppProvider>
-          <ThemeProvider>
-            <PwaRegister />
-            <NotificationScheduler />
-            <main className="mx-auto min-h-full max-w-lg px-4 pb-24 pt-0">
-              {children}
-            </main>
-            <BottomNav />
-          </ThemeProvider>
+          <I18nProvider>
+            <ThemeProvider>
+              <PwaRegister />
+              <OfflineBanner />
+              <NotificationScheduler />
+              <Onboarding />
+              <main className="mx-auto min-h-full max-w-lg px-4 pb-24 pt-0">
+                {children}
+              </main>
+              <BottomNav />
+            </ThemeProvider>
+          </I18nProvider>
         </AppProvider>
       </body>
     </html>

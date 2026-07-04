@@ -7,6 +7,7 @@ import { saveAddress } from "@/lib/db";
 import { reimportAddress, removeAddress } from "@/lib/services/address-service";
 import type { Address } from "@/types";
 import { AddressImport } from "@/components/addresses/address-import";
+import { WebcalImport } from "@/components/addresses/webcal-import";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -75,6 +76,7 @@ export function AddressManager() {
   return (
     <div className="space-y-6">
       <AddressImport />
+      <WebcalImport />
 
       {addresses.length === 0 ? (
         <Card>

@@ -5,27 +5,22 @@ import {
   getShownNotifications,
   markNotificationShown,
   cleanupOldNotifications,
+  getCheckInByEventId,
 } from "@/lib/db";
 import { generateId } from "@/lib/utils";
 import type { CollectionEvent, NotificationSettings } from "@/types";
+import {
+  buildNotificationKey,
+  isNotificationTimeReached,
+  type NotificationKind,
+} from "@/lib/notification-schedule";
+export {
+  enableBackgroundNotifications,
+  syncPushSchedule,
+  unregisterBackgroundPush,
+} from "@/lib/push/client";
 
-export function isNotificationTimeReached(targetTime: string, now = new Date()): boolean {
-  const [h, m] = targetTime.split(":").map(Number);
-  const target = new Date(now);
-  target.setHours(h ?? 0, m ?? 0, 0, 0);
-  return now >= target;
-}
-
-function isTimeReached(targetTime: string): boolean {
-  return isNotificationTimeReached(targetTime);
-}
-
-function buildNotificationKey(
-  eventId: string,
-  kind: "day_before" | "day_of"
-): string {
-  return `${eventId}_${kind}`;
-}
+export { isNotificationTimeReached };
 
 async function showNotification(
   title: string,
@@ -44,11 +39,9 @@ async function showNotification(
 
   try {
     if ("serviceWorker" in navigator) {
-      const registration = await navigator.serviceWorker.getRegistration();
-      if (registration?.active) {
-        await registration.showNotification(title, options);
-        return;
-      }
+      const registration = await navigator.serviceWorker.ready;
+      await registration.showNotification(title, options);
+      return;
     }
   } catch (error) {
     console.warn("Falha ao enviar via Service Worker, usando fallback:", error);
@@ -77,6 +70,25 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
 export function getNotificationPermission(): NotificationPermission {
   if (!("Notification" in window)) return "denied";
   return Notification.permission;
+}
+
+export async function setupBackgroundNotifications(): Promise<{
+  permission: NotificationPermission;
+  pushRegistered: boolean;
+}> {
+  const permission = await requestNotificationPermission();
+  if (permission !== "granted") {
+    return { permission, pushRegistered: false };
+  }
+
+  const { enableBackgroundNotifications } = await import("@/lib/push/client");
+  const pushRegistered = await enableBackgroundNotifications();
+  return { permission, pushRegistered };
+}
+
+export async function teardownBackgroundNotifications(): Promise<void> {
+  const { unregisterBackgroundPush } = await import("@/lib/push/client");
+  await unregisterBackgroundPush();
 }
 
 export async function checkAndShowNotifications(
@@ -117,8 +129,9 @@ async function processEventNotification(
   const addressName = addressMap.get(event.addressId) ?? "Desconhecido";
 
   if (settings.dayBeforeEnabled && event.date === ctx.tomorrow) {
-    const key = buildNotificationKey(event.id, "day_before");
-    if (!ctx.shownSet.has(key) && isTimeReached(settings.dayBeforeTime)) {
+    const kind: NotificationKind = "day_before";
+    const key = buildNotificationKey(event.id, kind);
+    if (!ctx.shownSet.has(key) && isNotificationTimeReached(settings.dayBeforeTime)) {
       await showNotification(
         `Amanhã: ${event.typeLabel}`,
         `${addressName} — ${event.typeLabel} será coletado amanhã.`,
@@ -127,7 +140,7 @@ async function processEventNotification(
       await markNotificationShown({
         id: generateId(),
         collectionEventId: event.id,
-        kind: "day_before",
+        kind,
         shownAt: ctx.today,
       });
       ctx.shownSet.add(key);
@@ -135,8 +148,9 @@ async function processEventNotification(
   }
 
   if (settings.dayOfEnabled && event.date === ctx.today) {
-    const key = buildNotificationKey(event.id, "day_of");
-    if (!ctx.shownSet.has(key) && isTimeReached(settings.dayOfTime)) {
+    const kind: NotificationKind = "day_of";
+    const key = buildNotificationKey(event.id, kind);
+    if (!ctx.shownSet.has(key) && isNotificationTimeReached(settings.dayOfTime)) {
       await showNotification(
         `Hoje: ${event.typeLabel}`,
         `${addressName} — ${event.typeLabel} será coletado hoje.`,
@@ -145,10 +159,32 @@ async function processEventNotification(
       await markNotificationShown({
         id: generateId(),
         collectionEventId: event.id,
-        kind: "day_of",
+        kind,
         shownAt: ctx.today,
       });
       ctx.shownSet.add(key);
+    }
+
+    if (settings.eveningReminderEnabled) {
+      const eveningKind: NotificationKind = "evening_missed";
+      const eveningKey = buildNotificationKey(event.id, eveningKind);
+      if (!ctx.shownSet.has(eveningKey) && isNotificationTimeReached(settings.eveningReminderTime)) {
+        const checkIn = await getCheckInByEventId(event.id);
+        if (!checkIn) {
+          await showNotification(
+            `Lembrete: ${event.typeLabel}`,
+            `${addressName} — ainda sem check-in para a coleta de hoje.`,
+            eveningKey
+          );
+          await markNotificationShown({
+            id: generateId(),
+            collectionEventId: event.id,
+            kind: eveningKind,
+            shownAt: ctx.today,
+          });
+          ctx.shownSet.add(eveningKey);
+        }
+      }
     }
   }
 }
@@ -156,8 +192,18 @@ async function processEventNotification(
 export function startNotificationScheduler(
   addressMap: Map<string, string>
 ): () => void {
-  const run = () => checkAndShowNotifications(addressMap);
+  const run = async () => {
+    await checkAndShowNotifications(addressMap);
+    const { syncPushSchedule } = await import("@/lib/push/client");
+    await syncPushSchedule();
+  };
   run();
   const interval = setInterval(run, 5 * 60 * 1000);
   return () => clearInterval(interval);
+}
+
+export async function syncNotificationsToServiceWorker(): Promise<void> {
+  if (!("serviceWorker" in navigator)) return;
+  const registration = await navigator.serviceWorker.ready;
+  registration.active?.postMessage({ type: "RUN_BG_CHECK" });
 }

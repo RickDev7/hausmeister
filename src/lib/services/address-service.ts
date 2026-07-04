@@ -1,4 +1,5 @@
 import { parseIcsFile, suggestAddressName } from "@/lib/ics-parser";
+import { fetchWebcal } from "@/lib/services/backup-service";
 import {
   deleteAddress as deleteAddressFromDb,
   replaceCollectionsForAddress,
@@ -6,18 +7,45 @@ import {
 } from "@/lib/db";
 import { generateId } from "@/lib/utils";
 import type { Address, CollectionEvent } from "@/types";
+import { DEFAULT_PROFILE_ID } from "@/types";
 
 export async function importNewAddress(
   file: File,
   addressName: string,
-  addressId: string = generateId()
+  addressId: string = generateId(),
+  profileId: string = DEFAULT_PROFILE_ID
 ): Promise<{ address: Address; events: CollectionEvent[] }> {
   const content = await file.text();
-  const events = parseIcsFile(content, addressId);
+  const events = parseIcsFile(content, addressId, profileId);
   const now = new Date().toISOString();
 
   const address: Address = {
     id: addressId,
+    profileId,
+    name: addressName,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  await saveAddress(address);
+  await replaceCollectionsForAddress(addressId, events);
+
+  return { address, events };
+}
+
+export async function importFromWebcal(
+  url: string,
+  addressName: string,
+  profileId: string = DEFAULT_PROFILE_ID
+): Promise<{ address: Address; events: CollectionEvent[] }> {
+  const content = await fetchWebcal(url);
+  const addressId = generateId();
+  const events = parseIcsFile(content, addressId, profileId);
+  const now = new Date().toISOString();
+
+  const address: Address = {
+    id: addressId,
+    profileId,
     name: addressName,
     createdAt: now,
     updatedAt: now,
@@ -31,7 +59,7 @@ export async function importNewAddress(
 
 export async function reimportAddress(address: Address, file: File): Promise<CollectionEvent[]> {
   const content = await file.text();
-  const events = parseIcsFile(content, address.id);
+  const events = parseIcsFile(content, address.id, address.profileId);
 
   await replaceCollectionsForAddress(address.id, events);
   await saveAddress({ ...address, updatedAt: new Date().toISOString() });
@@ -40,13 +68,14 @@ export async function reimportAddress(address: Address, file: File): Promise<Col
 }
 
 export async function importMultipleAddresses(
-  files: File[]
+  files: File[],
+  profileId: string = DEFAULT_PROFILE_ID
 ): Promise<{ address: Address; events: CollectionEvent[] }[]> {
   const results: { address: Address; events: CollectionEvent[] }[] = [];
 
   for (const file of files) {
     const name = suggestAddressName(file.name);
-    results.push(await importNewAddress(file, name));
+    results.push(await importNewAddress(file, name, generateId(), profileId));
   }
 
   return results;
