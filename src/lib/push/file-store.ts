@@ -97,3 +97,17 @@ export async function markNotificationsSent(
 export async function removeSubscription(deviceId: string): Promise<void> {
   await removePushRegistration(deviceId);
 }
+
+export async function getPushNotificationById(
+  deviceId: string,
+  notificationId: string
+): Promise<{
+  subscription: PushSubscriptionJSON;
+  notification: ScheduledPushNotification;
+} | null> {
+  const store = await readStore();
+  const sub = store.subscriptions[deviceId];
+  const notification = store.schedules[deviceId]?.find((n) => n.id === notificationId);
+  if (!sub || !notification) return null;
+  return { subscription: sub.subscription, notification };
+}

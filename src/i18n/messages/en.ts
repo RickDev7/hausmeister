@@ -150,6 +150,10 @@ export const en: Messages = {
     installHint: "Install on your device",
     privacy: "All data is stored locally on your device.",
     iosHint: "On iPhone: Safari → Share → Add to Home Screen",
+    pushOk: "Web Push active — reminders work with the app closed.",
+    pushPartial:
+      "Push not registered on the server. Check VAPID/Redis/QStash on Vercel and re-enable notifications.",
+    pushResync: "Re-sync reminders",
   },
   onboarding: {
     step1title: "Import your calendar",

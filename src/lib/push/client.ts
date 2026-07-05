@@ -89,7 +89,15 @@ export async function registerBackgroundPushSchedule(): Promise<boolean> {
     }),
   });
 
-  return res.ok;
+  if (!res.ok) return false;
+
+  const data = (await res.json()) as {
+    ok?: boolean;
+    storage?: string;
+    qstashScheduled?: number;
+  };
+
+  return data.ok === true && data.storage === "redis";
 }
 
 export async function unregisterBackgroundPush(): Promise<void> {

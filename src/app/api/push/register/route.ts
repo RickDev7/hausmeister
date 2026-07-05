@@ -24,12 +24,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Payload inválido" }, { status: 400 });
   }
 
-  await registerPushSchedule(body.deviceId, body.subscription, body.schedules);
+  const result = await registerPushSchedule(body.deviceId, body.subscription, body.schedules);
 
   return NextResponse.json({
     ok: true,
     scheduled: body.schedules.length,
-    storage: isRedisConfigured() ? "redis" : "file",
+    storage: result.storage,
+    qstashScheduled: result.qstashScheduled,
   });
 }
 

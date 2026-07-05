@@ -150,6 +150,10 @@ export const ptBR = {
     installHint: "Instalar no seu dispositivo",
     privacy: "Todos os dados são armazenados localmente no seu dispositivo.",
     iosHint: "No iPhone: Safari → Compartilhar → Adicionar à Tela de Início",
+    pushOk: "Web Push ativo — lembretes funcionam com o app fechado.",
+    pushPartial:
+      "Push não registado no servidor. Verifique VAPID/Redis/QStash na Vercel e reative as notificações.",
+    pushResync: "Re-sincronizar lembretes",
   },
   onboarding: {
     step1title: "Importe seu calendário",
@@ -345,6 +349,9 @@ export interface Messages {
     installHint: string;
     privacy: string;
     iosHint: string;
+    pushOk: string;
+    pushPartial: string;
+    pushResync: string;
   };
   onboarding: {
     step1title: string;

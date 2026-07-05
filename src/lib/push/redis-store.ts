@@ -105,6 +105,28 @@ export async function markNotificationsSentRedis(
   }
 }
 
+export async function getPushNotificationById(
+  deviceId: string,
+  notificationId: string
+): Promise<{
+  subscription: PushSubscriptionJSON;
+  notification: ScheduledPushNotification;
+} | null> {
+  const redis = getRedis();
+  if (!redis) return null;
+
+  const subRecord = await redis.get<PushSubscriptionRecord>(`${SUB_PREFIX}${deviceId}`);
+  const schedules = await redis.get<ScheduledPushNotification[]>(`${SCHEDULE_PREFIX}${deviceId}`);
+  const notification = schedules?.find((s) => s.id === notificationId);
+
+  if (!subRecord || !notification) return null;
+
+  return {
+    subscription: subRecord.subscription,
+    notification,
+  };
+}
+
 export async function removeSubscriptionRedis(deviceId: string): Promise<void> {
   const redis = getRedis();
   if (!redis) return;

@@ -54,6 +54,26 @@ export function SettingsPanel() {
     return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
 
+  useEffect(() => {
+    if (notifPermission !== "granted") {
+      setPushStatus(settings.notifications.enabled ? "partial" : "off");
+      return;
+    }
+    if (!settings.notifications.enabled) {
+      setPushStatus("off");
+      return;
+    }
+
+    setupBackgroundNotifications().then(({ pushRegistered }) => {
+      setPushStatus(pushRegistered ? "ok" : "partial");
+    });
+  }, [notifPermission, settings.notifications.enabled]);
+
+  const refreshPushRegistration = async () => {
+    const { pushRegistered } = await setupBackgroundNotifications();
+    setPushStatus(pushRegistered ? "ok" : "partial");
+  };
+
   const updateNotifications = async (partial: Partial<NotificationSettings>) => {
     const next = { ...settings.notifications, ...partial };
     await updateSettings({
@@ -63,7 +83,7 @@ export function SettingsPanel() {
     if (partial.enabled === false) {
       await teardownBackgroundNotifications();
       setPushStatus("off");
-    } else if (partial.enabled === true && notifPermission === "granted") {
+    } else if (notifPermission === "granted" && next.enabled) {
       const { pushRegistered } = await setupBackgroundNotifications();
       setPushStatus(pushRegistered ? "ok" : "partial");
     }
@@ -236,15 +256,15 @@ export function SettingsPanel() {
           {settings.notifications.enabled && notifPermission === "granted" && (
             <>
               {pushStatus === "ok" && (
-                <p className="text-xs text-primary">
-                  Web Push ativo — lembretes funcionam com o app fechado.
-                </p>
+                <p className="text-xs text-primary">{t.settings.pushOk}</p>
               )}
               {pushStatus === "partial" && (
-                <p className="text-xs text-muted-foreground">
-                  Permissão concedida. Configure VAPID keys no servidor para push com app fechado
-                  (fallback: sync periódico no Android).
-                </p>
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">{t.settings.pushPartial}</p>
+                  <Button variant="outline" size="sm" className="w-full" onClick={refreshPushRegistration}>
+                    {t.settings.pushResync}
+                  </Button>
+                </div>
               )}
               <NotificationTimeBlock
                 label={t.settings.dayBefore}

@@ -151,6 +151,10 @@ export const de: Messages = {
     installHint: "Auf Gerät installieren",
     privacy: "Alle Daten werden lokal gespeichert.",
     iosHint: "iPhone: Safari → Teilen → Zum Home-Bildschirm",
+    pushOk: "Web Push aktiv — Erinnerungen auch bei geschlossener App.",
+    pushPartial:
+      "Push nicht auf dem Server registriert. VAPID/Redis/QStash in Vercel prüfen und Benachrichtigungen erneut aktivieren.",
+    pushResync: "Erinnerungen neu synchronisieren",
   },
   onboarding: {
     step1title: "Kalender importieren",

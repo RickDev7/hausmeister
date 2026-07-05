@@ -1,11 +1,18 @@
 import { NextResponse } from "next/server";
-import { isPushServerConfigured, processDuePushNotifications } from "@/lib/push/server";
+import { isPushServerConfigured, processDuePushNotifications, getPushServerStatus } from "@/lib/push/server";
+
+function isAuthorizedCron(request: Request): boolean {
+  const cronSecret = process.env.CRON_SECRET;
+  const authHeader = request.headers.get("authorization");
+  const vercelCron = request.headers.get("x-vercel-cron");
+
+  if (vercelCron === "1") return true;
+  if (!cronSecret) return true;
+  return authHeader === `Bearer ${cronSecret}`;
+}
 
 export async function GET(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  const cronSecret = process.env.CRON_SECRET;
-
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  if (!isAuthorizedCron(request)) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
 
@@ -14,5 +21,10 @@ export async function GET(request: Request) {
   }
 
   const result = await processDuePushNotifications();
-  return NextResponse.json({ ok: true, ...result, at: new Date().toISOString() });
+  return NextResponse.json({
+    ok: true,
+    ...result,
+    server: getPushServerStatus(),
+    at: new Date().toISOString(),
+  });
 }
