@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Check, CheckCircle2, Undo2, XCircle } from "lucide-react";
 import { getTypeMeta } from "@/lib/collection-types";
 import { getCollectionTypeLabel } from "@/lib/waste-type-labels";
+import { formatExportDate } from "@/lib/format-locale";
 import type { EnrichedCollection } from "@/lib/collections";
 import { useApp } from "@/hooks/use-app";
 import { useI18n } from "@/hooks/use-i18n";
@@ -26,7 +27,7 @@ export function CollectionItem({ event, showDate = false }: CollectionItemProps)
     undoCheckInForEvent,
     settings,
   } = useApp();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [submitting, setSubmitting] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<CheckInDialogMode>("completed");
@@ -109,29 +110,38 @@ export function CollectionItem({ event, showDate = false }: CollectionItemProps)
             {event.addressName}
           </p>
           {!compact && (
-            <div className="mt-1 flex flex-wrap items-center gap-2">
-              <Badge variant={event.type} className={cn(event.type === "gelbe_tonne" && "text-foreground")}>
-                {typeLabel}
-              </Badge>
-              {isCompleted && (
-                <Badge variant="secondary" className="gap-1 bg-primary-container text-on-primary-container">
-                  <Check className="h-3 w-3" />
-                  {t.checkIn.done}
+            <div className="mt-1 space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant={event.type} className={cn(event.type === "gelbe_tonne" && "text-foreground")}>
+                  {typeLabel}
                 </Badge>
-              )}
-              {isMissed && (
-                <Badge variant="outline" className="gap-1 border-destructive/40 bg-destructive/10 text-destructive">
-                  <XCircle className="h-3 w-3" />
-                  {t.checkIn.missedDone}
-                </Badge>
-              )}
-              {showDate && (
-                <span className="text-xs text-muted-foreground">{event.date}</span>
-              )}
+                {isCompleted && (
+                  <Badge variant="secondary" className="gap-1 bg-primary-container text-on-primary-container">
+                    <Check className="h-3 w-3" />
+                    {t.checkIn.done}
+                  </Badge>
+                )}
+                {isMissed && (
+                  <Badge variant="outline" className="gap-1 border-destructive/40 bg-destructive/10 text-destructive">
+                    <XCircle className="h-3 w-3" />
+                    {t.checkIn.missedDone}
+                  </Badge>
+                )}
+              </div>
+              <div className="space-y-0.5 text-xs text-muted-foreground">
+                <p>
+                  {t.checkIn.putOutDate}: {formatExportDate(event.putOutDate, locale)}
+                </p>
+                <p>
+                  {t.checkIn.collectionDate}: {formatExportDate(event.collectionDate, locale)}
+                </p>
+              </div>
             </div>
           )}
           {compact && showDate && (
-            <span className="text-xs text-muted-foreground">{event.date}</span>
+            <span className="text-xs text-muted-foreground">
+              {formatExportDate(event.putOutDate, locale)}
+            </span>
           )}
         </div>
         {isResolved ? (

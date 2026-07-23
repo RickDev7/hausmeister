@@ -9,6 +9,8 @@ export type WasteType =
 export type Locale = "pt-BR" | "de" | "en";
 export type ViewMode = "compact" | "detailed";
 export type CheckInStatus = "completed" | "missed";
+/** Dias de antecedência para colocar o lixo na rua (0 = mesmo dia da coleta). */
+export type PutOutLeadDays = 0 | 1 | 2;
 
 export interface Profile {
   id: string;
@@ -22,7 +24,15 @@ export interface CheckIn {
   profileId: string;
   addressName: string;
   wasteType: WasteType;
-  eventDate: string;
+  /** Data em que o lixo deve/deveria ser colocado na rua. */
+  putOutDate: string;
+  /** Data oficial da coleta (do .ics). */
+  collectionDate: string;
+  /**
+   * Legado: antiga data única do evento.
+   * Preferir collectionDate; mantido para migração de registos antigos.
+   */
+  eventDate?: string;
   checkedAt: string;
   /** Omitido em registos antigos — tratado como "completed". */
   status?: CheckInStatus;
@@ -72,8 +82,13 @@ export interface CollectionEvent {
   type: CollectionType;
   typeLabel: string;
   originalTitle: string;
-  date: string;
+  /** Data oficial da coleta no .ics (não alterar). */
+  collectionDate: string;
+  /** Data em que o lixo deve ser colocado na rua (calculada). */
+  putOutDate: string;
   datetime?: string;
+  description?: string;
+  location?: string;
 }
 
 export interface NotificationSettings {
@@ -91,6 +106,8 @@ export interface AppSettings {
   notifications: NotificationSettings;
   locale: Locale;
   viewMode: ViewMode;
+  /** Antecedência para colocar o lixo (padrão: 1 dia antes). */
+  putOutLeadDays: PutOutLeadDays;
   onboardingCompleted: boolean;
   activeProfileId: string;
 }
@@ -117,6 +134,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   notifications: DEFAULT_NOTIFICATION_SETTINGS,
   locale: "pt-BR",
   viewMode: "detailed",
+  putOutLeadDays: 1,
   onboardingCompleted: false,
   activeProfileId: DEFAULT_PROFILE_ID,
 };

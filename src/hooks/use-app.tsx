@@ -6,6 +6,7 @@ import {
   getAllCheckIns,
   getAllCollections,
   getSettings,
+  recalculateAllPutOutDates,
   saveSettings,
 } from "@/lib/db";
 import type { Address, AppSettings, CheckIn, CollectionEvent } from "@/types";
@@ -68,9 +69,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const updateSettings = useCallback(async (newSettings: AppSettings) => {
+    const leadDaysChanged = newSettings.putOutLeadDays !== settings.putOutLeadDays;
     await saveSettings(newSettings);
     setSettings(newSettings);
-  }, []);
+
+    if (leadDaysChanged) {
+      const updated = await recalculateAllPutOutDates(newSettings.putOutLeadDays);
+      setCollections(updated);
+      try {
+        const { syncPushSchedule } = await import("@/lib/push/client");
+        await syncPushSchedule();
+      } catch {
+        // push opcional
+      }
+    }
+  }, [settings.putOutLeadDays]);
 
   const checkInForEvent = useCallback(
     async (event: EnrichedCollection, options?: Partial<CheckInOptions>) => {

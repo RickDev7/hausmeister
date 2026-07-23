@@ -1,12 +1,29 @@
 import { parseIcsFile, suggestAddressName } from "@/lib/ics-parser";
 import {
   deleteAddress as deleteAddressFromDb,
+  getSettings,
   replaceCollectionsForAddress,
   saveAddress,
 } from "@/lib/db";
+import { applyPutOutDates } from "@/lib/put-out-date";
 import { generateId } from "@/lib/utils";
-import type { Address, CollectionEvent } from "@/types";
-import { DEFAULT_PROFILE_ID } from "@/types";
+import type { Address, CollectionEvent, PutOutLeadDays } from "@/types";
+import { DEFAULT_APP_SETTINGS, DEFAULT_PROFILE_ID } from "@/types";
+
+async function getLeadDays(): Promise<PutOutLeadDays> {
+  const settings = await getSettings();
+  return settings.putOutLeadDays ?? DEFAULT_APP_SETTINGS.putOutLeadDays;
+}
+
+async function parseAndApplyPutOut(
+  content: string,
+  addressId: string,
+  profileId: string
+): Promise<CollectionEvent[]> {
+  const leadDays = await getLeadDays();
+  const events = parseIcsFile(content, addressId, profileId);
+  return applyPutOutDates(events, leadDays);
+}
 
 export async function importNewAddress(
   file: File,
@@ -15,7 +32,7 @@ export async function importNewAddress(
   profileId: string = DEFAULT_PROFILE_ID
 ): Promise<{ address: Address; events: CollectionEvent[] }> {
   const content = await file.text();
-  const events = parseIcsFile(content, addressId, profileId);
+  const events = await parseAndApplyPutOut(content, addressId, profileId);
   const now = new Date().toISOString();
 
   const address: Address = {
@@ -39,7 +56,7 @@ export async function importFromWebcal(
 ): Promise<{ address: Address; events: CollectionEvent[] }> {
   const content = await fetchWebcal(url);
   const addressId = generateId();
-  const events = parseIcsFile(content, addressId, profileId);
+  const events = await parseAndApplyPutOut(content, addressId, profileId);
   const now = new Date().toISOString();
 
   const address: Address = {
@@ -58,7 +75,7 @@ export async function importFromWebcal(
 
 export async function reimportAddress(address: Address, file: File): Promise<CollectionEvent[]> {
   const content = await file.text();
-  const events = parseIcsFile(content, address.id, address.profileId);
+  const events = await parseAndApplyPutOut(content, address.id, address.profileId);
 
   await replaceCollectionsForAddress(address.id, events);
   await saveAddress({ ...address, updatedAt: new Date().toISOString() });

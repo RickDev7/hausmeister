@@ -3,7 +3,7 @@
  * Verificação de notificações em background via IndexedDB (fallback sem Web Push).
  */
 const DB_NAME = "muellplaner";
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 function openDb() {
   return new Promise((resolve, reject) => {
@@ -93,13 +93,14 @@ async function runBackgroundNotificationCheck() {
 
   for (const event of collections) {
     const addressName = addressMap.get(event.addressId) || "Desconhecido";
+    const putOutDate = event.putOutDate || event.date;
 
-    if (notifications.dayBeforeEnabled && event.date === tomorrow) {
+    if (notifications.dayBeforeEnabled && putOutDate === tomorrow) {
       const kind = "day_before";
       const key = `${event.id}_${kind}`;
       if (!shownSet.has(key) && isTimeReached(notifications.dayBeforeTime, now)) {
         await self.registration.showNotification(`Amanhã: ${event.typeLabel}`, {
-          body: `${addressName} — ${event.typeLabel} será coletado amanhã.`,
+          body: `${addressName} — colocar ${event.typeLabel} na rua amanhã.`,
           tag: key,
           icon: "/icons/icon-192.png",
           badge: "/icons/icon-192.png",
@@ -114,12 +115,12 @@ async function runBackgroundNotificationCheck() {
       }
     }
 
-    if (notifications.dayOfEnabled && event.date === today) {
+    if (notifications.dayOfEnabled && putOutDate === today) {
       const kind = "day_of";
       const key = `${event.id}_${kind}`;
       if (!shownSet.has(key) && isTimeReached(notifications.dayOfTime, now)) {
         await self.registration.showNotification(`Hoje: ${event.typeLabel}`, {
-          body: `${addressName} — ${event.typeLabel} será coletado hoje.`,
+          body: `${addressName} — colocar ${event.typeLabel} na rua hoje.`,
           tag: key,
           icon: "/icons/icon-192.png",
           badge: "/icons/icon-192.png",
@@ -134,14 +135,14 @@ async function runBackgroundNotificationCheck() {
       }
     }
 
-    if (notifications.eveningReminderEnabled && event.date === today) {
+    if (notifications.eveningReminderEnabled && putOutDate === today) {
       const kind = "evening_missed";
       const key = `${event.id}_${kind}`;
       if (!shownSet.has(key) && isTimeReached(notifications.eveningReminderTime, now)) {
         const checkIn = await getCheckInByEventId(db, event.id);
         if (!checkIn) {
           await self.registration.showNotification(`Lembrete: ${event.typeLabel}`, {
-            body: `${addressName} — ainda sem check-in para a coleta de hoje.`,
+            body: `${addressName} — ainda sem check-in para colocar o lixo hoje.`,
             tag: key,
             icon: "/icons/icon-192.png",
             badge: "/icons/icon-192.png",

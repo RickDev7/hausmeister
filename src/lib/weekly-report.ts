@@ -59,10 +59,10 @@ export function computeWeeklyReport(
   const checkedByEventId = new Map(checkIns.map((c) => [c.collectionEventId, c]));
 
   const weekEvents = collections
-    .filter((e) => e.date >= start && e.date <= end)
+    .filter((e) => e.putOutDate >= start && e.putOutDate <= end)
     .sort(
       (a, b) =>
-        a.date.localeCompare(b.date) ||
+        a.putOutDate.localeCompare(b.putOutDate) ||
         (addressMap.get(a.addressId) ?? "").localeCompare(addressMap.get(b.addressId) ?? "")
     );
 
@@ -71,7 +71,7 @@ export function computeWeeklyReport(
     const status = resolveRowStatus(checkIn);
     return {
       eventId: event.id,
-      date: event.date,
+      date: event.putOutDate,
       addressName: addressMap.get(event.addressId) ?? "Desconhecido",
       typeLabel: event.typeLabel,
       status,

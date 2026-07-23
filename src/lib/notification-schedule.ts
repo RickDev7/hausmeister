@@ -24,6 +24,10 @@ function combineDateAndTime(dateStr: string, timeStr: string): Date {
   return d;
 }
 
+/**
+ * Agenda notificações com base em putOutDate (dia de colocar o lixo),
+ * nunca em collectionDate (coleta oficial).
+ */
 export function buildPushSchedule(
   events: CollectionEvent[],
   addressMap: Map<string, string>,
@@ -39,9 +43,10 @@ export function buildPushSchedule(
 
   for (const event of events) {
     const addressName = addressMap.get(event.addressId) ?? "Desconhecido";
+    const putOutDate = event.putOutDate;
 
     if (settings.dayBeforeEnabled) {
-      const dayBefore = format(subDays(parseISO(event.date), 1), "yyyy-MM-dd");
+      const dayBefore = format(subDays(parseISO(putOutDate), 1), "yyyy-MM-dd");
       const sendAt = combineDateAndTime(dayBefore, settings.dayBeforeTime);
       if (sendAt > now && sendAt <= horizon) {
         const kind: NotificationKind = "day_before";
@@ -49,7 +54,7 @@ export function buildPushSchedule(
           id: buildNotificationKey(event.id, kind),
           sendAt: sendAt.toISOString(),
           title: `Amanhã: ${event.typeLabel}`,
-          body: `${addressName} — ${event.typeLabel} será coletado amanhã.`,
+          body: `${addressName} — colocar ${event.typeLabel} na rua amanhã (coleta ${event.collectionDate}).`,
           tag: buildNotificationKey(event.id, kind),
           kind,
           collectionEventId: event.id,
@@ -58,14 +63,14 @@ export function buildPushSchedule(
     }
 
     if (settings.dayOfEnabled) {
-      const sendAt = combineDateAndTime(event.date, settings.dayOfTime);
-      if (sendAt > now && sendAt <= horizon && event.date >= todayStr) {
+      const sendAt = combineDateAndTime(putOutDate, settings.dayOfTime);
+      if (sendAt > now && sendAt <= horizon && putOutDate >= todayStr) {
         const kind: NotificationKind = "day_of";
         schedules.push({
           id: buildNotificationKey(event.id, kind),
           sendAt: sendAt.toISOString(),
           title: `Hoje: ${event.typeLabel}`,
-          body: `${addressName} — ${event.typeLabel} será coletado hoje.`,
+          body: `${addressName} — colocar ${event.typeLabel} na rua hoje (coleta ${event.collectionDate}).`,
           tag: buildNotificationKey(event.id, kind),
           kind,
           collectionEventId: event.id,
@@ -74,14 +79,14 @@ export function buildPushSchedule(
     }
 
     if (settings.eveningReminderEnabled) {
-      const sendAt = combineDateAndTime(event.date, settings.eveningReminderTime);
-      if (sendAt > now && sendAt <= horizon && event.date >= todayStr) {
+      const sendAt = combineDateAndTime(putOutDate, settings.eveningReminderTime);
+      if (sendAt > now && sendAt <= horizon && putOutDate >= todayStr) {
         const kind: NotificationKind = "evening_missed";
         schedules.push({
           id: buildNotificationKey(event.id, kind),
           sendAt: sendAt.toISOString(),
           title: `Lembrete: ${event.typeLabel}`,
-          body: `${addressName} — ainda sem check-in para a coleta de hoje.`,
+          body: `${addressName} — ainda sem check-in para colocar o lixo hoje.`,
           tag: buildNotificationKey(event.id, kind),
           kind,
           collectionEventId: event.id,

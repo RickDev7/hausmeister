@@ -158,7 +158,9 @@ function buildEvent(
     type,
     typeLabel: label,
     originalTitle: parsed.summary,
-    date: dateInfo.date,
+    /** Data oficial do .ics — nunca alterar. putOutDate é aplicado depois. */
+    collectionDate: dateInfo.date,
+    putOutDate: dateInfo.date,
     datetime: dateInfo.datetime,
   };
 }
@@ -199,7 +201,9 @@ export function parseIcsFile(
     unique.set(e.id, e);
   }
 
-  return Array.from(unique.values()).sort((a, b) => a.date.localeCompare(b.date));
+  return Array.from(unique.values()).sort((a, b) =>
+    a.collectionDate.localeCompare(b.collectionDate)
+  );
 }
 
 export function suggestAddressName(filename: string): string {

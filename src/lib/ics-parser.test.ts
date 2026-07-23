@@ -56,6 +56,8 @@ describe("computeCheckInStats", () => {
         profileId: "default-profile",
         addressName: "Casa",
         wasteType: "Restmüll",
+        putOutDate: today.slice(0, 10),
+        collectionDate: today.slice(0, 10),
         eventDate: today.slice(0, 10),
         checkedAt: today,
       },

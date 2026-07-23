@@ -9,12 +9,12 @@ export const ptBR = {
     main: "Navegação principal",
   },
   home: {
-    subtitle: "Suas datas de coleta",
+    subtitle: "Quando colocar o lixo na rua",
     today: "Hoje",
     tomorrow: "Amanhã",
     upcoming: "Próximos dias",
-    noToday: "Sem coleta hoje",
-    noTomorrow: "Sem coleta amanhã",
+    noToday: "Nada para colocar na rua hoje",
+    noTomorrow: "Nada para colocar na rua amanhã",
     welcome: "Bem-vindo ao Planejador de Lixo!",
     welcomeHint: "Importe arquivos .ics do seu serviço de coleta em \"Endereços\".",
     noFilterResults: "Nenhuma coleta encontrada para os filtros selecionados.",
@@ -33,6 +33,8 @@ export const ptBR = {
     missedReason: "Motivo (obrigatório)",
     missedReasonRequired: "Explique por que a coleta não saiu.",
     missedReasonPlaceholder: "Ex.: esqueci, feriado, lixeira cheia…",
+    putOutDate: "Colocar na rua",
+    collectionDate: "Coleta oficial",
   },
   calendar: {
     title: "Calendário",
@@ -136,8 +138,8 @@ export const ptBR = {
     notifications: "Notificações",
     enableNotif: "Ativar notificações",
     allow: "Permitir",
-    dayBefore: "No dia anterior",
-    dayOf: "No dia da coleta",
+    dayBefore: "No dia anterior a colocar",
+    dayOf: "No dia de colocar",
     evening: "Lembrete noturno",
     eveningHint: "Se não fez check-in até este horário",
     time: "Horário",
@@ -146,6 +148,11 @@ export const ptBR = {
     viewMode: "Modo de exibição",
     compact: "Compacto",
     detailed: "Detalhado",
+    putOutLeadTitle: "Antecedência para colocar o lixo",
+    putOutLeadHint: "A data oficial de coleta do calendário não muda. Só recalcula quando colocar na rua.",
+    putOutSameDay: "Mesmo dia",
+    putOutOneDay: "1 dia antes (padrão)",
+    putOutTwoDays: "2 dias antes",
     install: "Instalar app",
     installHint: "Instalar no seu dispositivo",
     privacy: "Todos os dados são armazenados localmente no seu dispositivo.",
@@ -236,6 +243,8 @@ export interface Messages {
     missedReason: string;
     missedReasonRequired: string;
     missedReasonPlaceholder: string;
+    putOutDate: string;
+    collectionDate: string;
   };
   calendar: {
     title: string;
@@ -345,6 +354,11 @@ export interface Messages {
     viewMode: string;
     compact: string;
     detailed: string;
+    putOutLeadTitle: string;
+    putOutLeadHint: string;
+    putOutSameDay: string;
+    putOutOneDay: string;
+    putOutTwoDays: string;
     install: string;
     installHint: string;
     privacy: string;

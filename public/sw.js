@@ -1,6 +1,6 @@
 importScripts("/sw-bg-notifications.js");
 
-const CACHE_NAME = "muellplaner-v3";
+const CACHE_NAME = "muellplaner-v4";
 const STATIC_ASSETS = [
   "/",
   "/calendar",

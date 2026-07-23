@@ -60,11 +60,11 @@ export function getEventsForMonth(
   const map = new Map<string, CollectionEvent[]>();
 
   for (const event of events) {
-    const d = parseISO(event.date);
+    const d = parseISO(event.putOutDate);
     if (d >= start && d <= end) {
-      const list = map.get(event.date) ?? [];
+      const list = map.get(event.putOutDate) ?? [];
       list.push(event);
-      map.set(event.date, list);
+      map.set(event.putOutDate, list);
     }
   }
   return map;

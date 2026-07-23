@@ -127,14 +127,15 @@ async function processEventNotification(
   }
 ): Promise<void> {
   const addressName = addressMap.get(event.addressId) ?? "Desconhecido";
+  const putOutDate = event.putOutDate;
 
-  if (settings.dayBeforeEnabled && event.date === ctx.tomorrow) {
+  if (settings.dayBeforeEnabled && putOutDate === ctx.tomorrow) {
     const kind: NotificationKind = "day_before";
     const key = buildNotificationKey(event.id, kind);
     if (!ctx.shownSet.has(key) && isNotificationTimeReached(settings.dayBeforeTime)) {
       await showNotification(
         `Amanhã: ${event.typeLabel}`,
-        `${addressName} — ${event.typeLabel} será coletado amanhã.`,
+        `${addressName} — colocar ${event.typeLabel} na rua amanhã (coleta ${event.collectionDate}).`,
         key
       );
       await markNotificationShown({
@@ -147,13 +148,13 @@ async function processEventNotification(
     }
   }
 
-  if (settings.dayOfEnabled && event.date === ctx.today) {
+  if (settings.dayOfEnabled && putOutDate === ctx.today) {
     const kind: NotificationKind = "day_of";
     const key = buildNotificationKey(event.id, kind);
     if (!ctx.shownSet.has(key) && isNotificationTimeReached(settings.dayOfTime)) {
       await showNotification(
         `Hoje: ${event.typeLabel}`,
-        `${addressName} — ${event.typeLabel} será coletado hoje.`,
+        `${addressName} — colocar ${event.typeLabel} na rua hoje (coleta ${event.collectionDate}).`,
         key
       );
       await markNotificationShown({
@@ -173,7 +174,7 @@ async function processEventNotification(
         if (!checkIn) {
           await showNotification(
             `Lembrete: ${event.typeLabel}`,
-            `${addressName} — ainda sem check-in para a coleta de hoje.`,
+            `${addressName} — ainda sem check-in para colocar o lixo hoje.`,
             eveningKey
           );
           await markNotificationShown({

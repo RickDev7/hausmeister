@@ -19,7 +19,7 @@ import {
   setupBackgroundNotifications,
   teardownBackgroundNotifications,
 } from "@/lib/notifications";
-import type { Locale, NotificationSettings, ViewMode } from "@/types";
+import type { Locale, NotificationSettings, PutOutLeadDays, ViewMode } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -131,6 +131,10 @@ export function SettingsPanel() {
     await updateSettings({ ...settings, viewMode });
   };
 
+  const handlePutOutLeadDays = async (putOutLeadDays: PutOutLeadDays) => {
+    await updateSettings({ ...settings, putOutLeadDays });
+  };
+
   const themeOptions = [
     { value: "light" as const, label: t.settings.themeLight, icon: Sun },
     { value: "dark" as const, label: t.settings.themeDark, icon: Moon },
@@ -196,6 +200,38 @@ export function SettingsPanel() {
                 )}
               >
                 {mode === "compact" ? t.settings.compact : t.settings.detailed}
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t.settings.putOutLeadTitle}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">{t.settings.putOutLeadHint}</p>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            {(
+              [
+                { value: 0 as PutOutLeadDays, label: t.settings.putOutSameDay },
+                { value: 1 as PutOutLeadDays, label: t.settings.putOutOneDay },
+                { value: 2 as PutOutLeadDays, label: t.settings.putOutTwoDays },
+              ] as const
+            ).map(({ value, label }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => handlePutOutLeadDays(value)}
+                className={cn(
+                  "rounded-2xl border p-3 text-sm font-medium transition-colors",
+                  settings.putOutLeadDays === value
+                    ? "border-primary bg-primary-container text-on-primary-container"
+                    : "border-outline-variant hover:bg-surface-container"
+                )}
+              >
+                {label}
               </button>
             ))}
           </div>

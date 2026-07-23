@@ -10,7 +10,7 @@ import {
   getUniqueAddressNames,
   type CheckInFilters,
 } from "@/lib/check-ins";
-import { formatCheckInDate, formatCheckInTime } from "@/lib/format-locale";
+import { formatCheckInDate, formatCheckInTime, formatExportDate } from "@/lib/format-locale";
 import { getWasteTypeLabel } from "@/lib/waste-type-labels";
 import { WASTE_TYPES, type CheckIn } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
@@ -136,7 +136,7 @@ export function CheckInHistory() {
 
 function CheckInHistoryItem({ checkIn }: { checkIn: CheckIn }) {
   const { undoCheckInForEvent } = useApp();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [submitting, setSubmitting] = useState(false);
   const isMissed = checkIn.status === "missed";
   const wasteLabel = getWasteTypeLabel(checkIn.wasteType, t);
@@ -165,9 +165,15 @@ function CheckInHistoryItem({ checkIn }: { checkIn: CheckIn }) {
             </Badge>
           )}
         </div>
-        {checkIn.note && (
-          <p className="truncate text-xs text-muted-foreground">{checkIn.note}</p>
-        )}
+        <div className="mt-1 space-y-0.5 text-xs text-muted-foreground">
+          <p>
+            {t.checkIn.putOutDate}: {formatExportDate(checkIn.putOutDate, locale)}
+          </p>
+          <p>
+            {t.checkIn.collectionDate}: {formatExportDate(checkIn.collectionDate, locale)}
+          </p>
+          {checkIn.note && <p className="truncate">{checkIn.note}</p>}
+        </div>
       </div>
       <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
         {formatCheckInTime(checkIn.checkedAt)}

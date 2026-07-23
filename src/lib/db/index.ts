@@ -7,6 +7,7 @@ import type {
   CollectionEvent,
   NotificationSettings,
   Profile,
+  PutOutLeadDays,
   ShownNotification,
   WasteType,
 } from "@/types";
@@ -16,6 +17,7 @@ import {
   DEFAULT_PROFILE,
   DEFAULT_PROFILE_ID,
 } from "@/types";
+import { normalizeCollectionEvent, withPutOutDate } from "@/lib/put-out-date";
 
 interface StoredSettings extends AppSettings {
   key: "app";
@@ -33,8 +35,15 @@ interface MuellplanerDB extends DBSchema {
   };
   collections: {
     key: string;
-    value: CollectionEvent;
-    indexes: { "by-address": string; "by-date": string; "by-type": string; "by-profile": string };
+    value: CollectionEvent & { date?: string };
+    indexes: {
+      "by-address": string;
+      "by-date": string;
+      "by-type": string;
+      "by-profile": string;
+      "by-put-out-date": string;
+      "by-collection-date": string;
+    };
   };
   settings: {
     key: string;
@@ -63,7 +72,7 @@ interface MuellplanerDB extends DBSchema {
 }
 
 const DB_NAME = "muellplaner";
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 let dbPromise: Promise<IDBPDatabase<MuellplanerDB>> | null = null;
 
@@ -122,9 +131,20 @@ function getDB() {
             }
           }
         }
+
+        if (oldVersion < 4 && db.objectStoreNames.contains("collections")) {
+          const collectionStore = transaction.objectStore("collections");
+          if (!collectionStore.indexNames.contains("by-put-out-date")) {
+            collectionStore.createIndex("by-put-out-date", "putOutDate");
+          }
+          if (!collectionStore.indexNames.contains("by-collection-date")) {
+            collectionStore.createIndex("by-collection-date", "collectionDate");
+          }
+        }
       },
     }).then(async (db) => {
       await migrateToV3(db);
+      await migrateToV4(db);
       return db;
     });
   }
@@ -168,9 +188,37 @@ async function migrateToV3(db: IDBPDatabase<MuellplanerDB>): Promise<void> {
       rest.viewMode !== merged.viewMode ||
       rest.onboardingCompleted !== merged.onboardingCompleted ||
       rest.activeProfileId !== merged.activeProfileId ||
+      rest.putOutLeadDays !== merged.putOutLeadDays ||
       rest.notifications?.eveningReminderEnabled === undefined
     ) {
       await db.put("settings", { key: "app", ...merged });
+    }
+  }
+}
+
+async function migrateToV4(db: IDBPDatabase<MuellplanerDB>): Promise<void> {
+  const stored = await db.get("settings", "app");
+  const leadDays =
+    (stored && "putOutLeadDays" in stored
+      ? (stored.putOutLeadDays as PutOutLeadDays)
+      : undefined) ?? DEFAULT_APP_SETTINGS.putOutLeadDays;
+
+  const collections = await db.getAll("collections");
+  for (const raw of collections) {
+    const normalized = normalizeCollectionEvent(raw, leadDays);
+    await db.put("collections", normalized);
+  }
+
+  const checkIns = await db.getAll("checkIns");
+  for (const ci of checkIns) {
+    if (!ci.collectionDate || !ci.putOutDate) {
+      const legacyDate = ci.collectionDate || ci.eventDate || ci.checkedAt.slice(0, 10);
+      await db.put("checkIns", {
+        ...ci,
+        collectionDate: ci.collectionDate || legacyDate,
+        putOutDate: ci.putOutDate || legacyDate,
+        eventDate: ci.eventDate || legacyDate,
+      });
     }
   }
 }
@@ -188,6 +236,7 @@ function mergeSettings(stored: Partial<AppSettings> | undefined): AppSettings {
     notifications: mergeNotificationSettings(stored.notifications),
     locale: stored.locale ?? DEFAULT_APP_SETTINGS.locale,
     viewMode: stored.viewMode ?? DEFAULT_APP_SETTINGS.viewMode,
+    putOutLeadDays: stored.putOutLeadDays ?? DEFAULT_APP_SETTINGS.putOutLeadDays,
     onboardingCompleted: stored.onboardingCompleted ?? DEFAULT_APP_SETTINGS.onboardingCompleted,
     activeProfileId: stored.activeProfileId ?? DEFAULT_APP_SETTINGS.activeProfileId,
   };
@@ -258,7 +307,9 @@ export async function deleteAddress(id: string): Promise<void> {
 // Collections
 export async function getAllCollections(): Promise<CollectionEvent[]> {
   const db = await getDB();
-  return db.getAll("collections");
+  const settings = await getSettings();
+  const raw = await db.getAll("collections");
+  return raw.map((event) => normalizeCollectionEvent(event, settings.putOutLeadDays));
 }
 
 export async function saveCollection(event: CollectionEvent): Promise<void> {
@@ -289,6 +340,37 @@ export async function replaceCollectionsForAddress(
   const orphanedEventIds = removedEventIds.filter((id) => !keptEventIds.has(id));
   await deleteShownNotificationsForEventIds(orphanedEventIds);
   await deleteCheckInsForEventIds(orphanedEventIds);
+}
+
+/** Recalcula putOutDate de todos os eventos após mudar a antecedência. */
+export async function recalculateAllPutOutDates(
+  leadDays: PutOutLeadDays
+): Promise<CollectionEvent[]> {
+  const db = await getDB();
+  const raw = await db.getAll("collections");
+  const updated = raw
+    .map((event) => {
+      const collectionDate =
+        event.collectionDate || (event as CollectionEvent & { date?: string }).date;
+      if (!collectionDate) return null;
+      return withPutOutDate(
+        {
+          ...event,
+          collectionDate,
+          putOutDate: event.putOutDate || collectionDate,
+        },
+        leadDays
+      );
+    })
+    .filter((e): e is CollectionEvent => e !== null);
+
+  const tx = db.transaction("collections", "readwrite");
+  for (const event of updated) {
+    await tx.store.put(event);
+  }
+  await tx.done;
+
+  return updated;
 }
 
 // Settings
@@ -342,7 +424,13 @@ export const saveCheckIn = addCheckIn;
 export async function getAllCheckIns(): Promise<CheckIn[]> {
   const db = await getDB();
   const all = await db.getAll("checkIns");
-  return all.sort((a, b) => b.checkedAt.localeCompare(a.checkedAt));
+  return all
+    .map((ci) => ({
+      ...ci,
+      collectionDate: ci.collectionDate || ci.eventDate || ci.checkedAt.slice(0, 10),
+      putOutDate: ci.putOutDate || ci.eventDate || ci.checkedAt.slice(0, 10),
+    }))
+    .sort((a, b) => b.checkedAt.localeCompare(a.checkedAt));
 }
 
 export async function getCheckInsByDate(date: string): Promise<CheckIn[]> {

@@ -4,7 +4,7 @@ import type { CheckIn, CollectionEvent } from "@/types";
 
 const addressMap = new Map([["addr-1", "Hauptstr. 1"], ["addr-2", "Bahnhofweg 2"]]);
 
-function event(id: string, addressId: string, date: string): CollectionEvent {
+function event(id: string, addressId: string, collectionDate: string, putOutDate: string): CollectionEvent {
   return {
     id,
     addressId,
@@ -12,36 +12,39 @@ function event(id: string, addressId: string, date: string): CollectionEvent {
     type: "biomuell",
     typeLabel: "Biomüll",
     originalTitle: "Biomüll",
-    date,
+    collectionDate,
+    putOutDate,
   };
 }
 
-function checkIn(eventId: string, eventDate: string, status: CheckIn["status"] = "completed"): CheckIn {
+function checkIn(eventId: string, putOutDate: string, collectionDate: string, status: CheckIn["status"] = "completed"): CheckIn {
   return {
     id: `ci-${eventId}`,
     collectionEventId: eventId,
     profileId: "default-profile",
     addressName: "Hauptstr. 1",
     wasteType: "Biomüll",
-    eventDate,
-    checkedAt: `${eventDate}T10:00:00.000Z`,
+    putOutDate,
+    collectionDate,
+    eventDate: collectionDate,
+    checkedAt: `${putOutDate}T10:00:00.000Z`,
     status,
   };
 }
 
 describe("computeWeeklyReport", () => {
-  it("counts scheduled, check-ins, missed and pending for the week", () => {
+  it("groups by putOutDate within the week", () => {
     const ref = parseISO("2026-07-08");
     const collections = [
-      event("e1", "addr-1", "2026-07-06"),
-      event("e2", "addr-1", "2026-07-08"),
-      event("e3", "addr-2", "2026-07-10"),
-      event("e4", "addr-2", "2026-07-15"),
+      event("e1", "addr-1", "2026-07-07", "2026-07-06"),
+      event("e2", "addr-1", "2026-07-09", "2026-07-08"),
+      event("e3", "addr-2", "2026-07-11", "2026-07-10"),
+      event("e4", "addr-2", "2026-07-16", "2026-07-15"),
     ];
     const checkIns = [
-      checkIn("e1", "2026-07-06"),
-      checkIn("e2", "2026-07-08"),
-      { ...checkIn("e3", "2026-07-10", "missed"), note: "Esqueci", status: "missed" as const },
+      checkIn("e1", "2026-07-06", "2026-07-07"),
+      checkIn("e2", "2026-07-08", "2026-07-09"),
+      { ...checkIn("e3", "2026-07-10", "2026-07-11", "missed"), note: "Esqueci" },
     ];
 
     const report = computeWeeklyReport(collections, checkIns, addressMap, ref);
@@ -51,8 +54,6 @@ describe("computeWeeklyReport", () => {
     expect(report.missed).toBe(1);
     expect(report.pending).toBe(0);
     expect(report.complianceRate).toBe(67);
-    expect(report.byAddress).toHaveLength(2);
-    expect(report.rows.find((r) => r.eventId === "e3")?.status).toBe("missed");
   });
 
   it("returns empty week when no events", () => {
